@@ -180,12 +180,22 @@ key, rotate the env var, deploy atomically.
 
 ## Rhizome internal interface
 
-### Current: HTTP
+### Two surfaces
 
-Rhizome's internal FastAPI service. Cambium calls it with:
+Rhizome exposes two FastAPI routers on its internal interface. Cambium routes to
+the right one based on what the request needs:
+
+```
+Cambium
+  ├── AI operation? → POST /internal/agent   (LangGraph graph execution)
+  └── CRUD?         → GET/POST /internal/data/...  (direct SQLAlchemy, no LLM)
+```
+
+**Agent endpoint** — for requests that require LangGraph reasoning (triage, interaction
+resolution, care analysis, incident triage, complex conversational queries):
 
 ```json
-POST /internal/chat
+POST /internal/agent
 {
   "user_id":      "abc-123",
   "thread_id":    "thread-xyz",
@@ -196,20 +206,50 @@ POST /internal/chat
 }
 ```
 
-### Future: gRPC
+**Data endpoint** — for simple reads and status mutations that don't need AI
+reasoning (list tasks, get project progress, complete a task, view activity history).
+These bypass the LangGraph agent entirely — no LLM call, just a DB query:
 
-Migrate when streaming LLM responses are needed — gRPC supports bidirectional
-streaming natively. HTTP is fine for request/response flows.
+```
+GET  /internal/data/tasks?project_id=...
+GET  /internal/data/tasks/daily
+GET  /internal/data/projects/{id}
+GET  /internal/data/projects/{id}/progress
+POST /internal/data/tasks/{id}/complete
+POST /internal/data/tasks/{id}/defer
+...
+```
+
+This split matters for performance and cost. A `GET /api/v1/tasks` request from
+Verdant should not spin up a full LangGraph agent turn — it should be a single
+SQL query. Only operations that require AI reasoning pay the LLM cost.
+
+Rhizome's data endpoint is built during **Phase 3** alongside the agent endpoint.
+
+### Rhizome instance topology
+
+Rhizome instances are stateless — domain data and LangGraph conversation checkpoints
+both live in Postgres. Cambium can route any request to any available Rhizome
+instance. No sticky sessions. See `rhizome/docs/architecture/deployment.md` for
+the full topology, scaling model, and future Temporal evolution.
+
+### Current: HTTP → Future: gRPC
+
+HTTP is correct for request/response flows. Migrate to gRPC when Verdant needs
+token streaming (streaming LLM responses). gRPC supports bidirectional streaming
+natively and is a drop-in for the internal interface without changing Cambium's
+public API surface.
 
 ---
 
 ## Build order
 
-### Phase 0 — Postgres setup (do this first, before writing Go)
+### Phase 0 — Postgres setup (in progress)
 
-- Stand up Postgres locally: `docker run --name rhizome-pg -e POSTGRES_PASSWORD=dev -p 5432:5432 -d postgres`
+- ~~Migrate Rhizome: update `db/database.py` to read `DATABASE_URL`, swap `SqliteSaver` → `langgraph-checkpoint-postgres`~~ **done** (geranium commit 6a3c672)
+- Stand up Postgres: `docker run --name rhizome-pg -e POSTGRES_PASSWORD=dev -p 5432:5432 -d postgres`
 - Create schemas: `CREATE SCHEMA cambium; CREATE SCHEMA rhizome;`
-- Migrate Rhizome: update `db/database.py` to read `DATABASE_URL`, swap `SqliteSaver` → `langgraph-checkpoint-postgres`
+- Set `DATABASE_URL` in Rhizome `.env`, run `init_db()` to create `rhizome` schema tables
 - Verify Rhizome tests still pass (test suite uses in-memory SQLite, unaffected)
 
 ### Phase 1 — Go project skeleton

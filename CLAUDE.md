@@ -35,7 +35,8 @@ go build ./...
 go test ./...
 ```
 
-No code yet — this is the initial setup phase.
+**Phase 0 in progress** — Rhizome has been updated to read `DATABASE_URL` and select its
+checkpointer based on environment. Postgres setup is the next step before any Go code is written.
 
 ## Database design
 
@@ -123,10 +124,15 @@ golang.org/x/crypto
 ## How Cambium calls Rhizome
 
 Rhizome exposes a small internal FastAPI service (built during Cambium Phase 3).
-Cambium calls it over HTTP, passing in the request body:
+It presents two surfaces — Cambium routes to the right one based on request type.
+
+### Agent endpoint — AI operations
+
+For requests that require LangGraph reasoning (triage, interactions, care analysis,
+incident analysis, complex queries):
 
 ```json
-POST /internal/chat
+POST /internal/agent
 {
   "user_id": "abc-123",
   "thread_id": "thread-xyz",
@@ -137,8 +143,33 @@ POST /internal/chat
 }
 ```
 
-The `provider_key` is decrypted by Cambium immediately before the request and never
-logged or persisted in decrypted form.
+### Data endpoint — direct reads and writes
+
+For requests that don't require AI reasoning (list tasks, get project, update task
+status, view activity history), Rhizome exposes direct data endpoints that bypass
+the LangGraph agent entirely. These are faster and cheaper — no LLM call, just a
+SQLAlchemy query.
+
+```
+GET  /internal/data/tasks
+GET  /internal/data/projects/{id}
+POST /internal/data/tasks/{id}/complete
+...
+```
+
+Cambium determines which surface to call. The rule is simple:
+- Endpoints that involve user messages or AI reasoning → `/internal/agent`
+- CRUD reads and simple status mutations → `/internal/data/...`
+
+The `provider_key` is only included in agent requests. It is decrypted by Cambium
+immediately before the request and never logged or persisted in decrypted form.
+
+### Rhizome instance routing
+
+Rhizome instances are stateless — all domain state and conversation checkpoints live
+in Postgres. Cambium can route any request to any available Rhizome instance; no
+sticky sessions are needed. See `rhizome/docs/architecture/deployment.md` for the
+full deployment topology and scaling model.
 
 ## Planned API surface
 
