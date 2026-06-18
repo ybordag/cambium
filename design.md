@@ -1,7 +1,7 @@
 # Cambium — Design Document
 
-**Status:** Initial design
-**Version:** 0.1
+**Status:** Initial design — updated with provider key storage and Postgres decisions  
+**Version:** 0.2
 
 ---
 
@@ -9,11 +9,10 @@
 
 Cambium is the HTTP API gateway for the Gardening Agent system. It sits between
 the frontend (Verdant) and the domain engine (Rhizome), handling authentication,
-request routing, and the public HTTP contract.
+encrypted provider key storage, request routing, and the public HTTP contract.
 
 The name comes from botany: the cambium is the actively dividing layer between
-the inner wood and the outer bark of a plant. It mediates exchange between the
-two — exactly what an API gateway does.
+the inner wood and the outer bark of a plant — exactly what a gateway does.
 
 ---
 
@@ -21,21 +20,26 @@ two — exactly what an API gateway does.
 
 ```
 Verdant (React frontend)
-    ↓  HTTP/JSON  /api/v1
-Cambium (this repo — Go)
-    ↓  verifies JWT → extracts user_id
-    ↓  calls Rhizome over gRPC or HTTP
+    │  HTTP/JSON  /api/v1  Authorization: Bearer <token>
+    ▼
+Cambium (Go)
+    │  verifies JWT → extracts user_id
+    │  decrypts provider key for this user
+    │  calls Rhizome over internal HTTP
+    ▼
 Rhizome (Python — domain engine)
-    ↓  threads user_id through graph and tools
-    ↓  all DB queries scoped to user_id
+    │  { user_id, provider, provider_key, ... }
+    │  threads user_id through graph and tools
+    │  uses provider_key for all LLM calls
+    ▼
 Postgres
-    ↦  users table  (owned by Cambium)
-    ↦  Rhizome domain tables  (scoped by user_id)
+    ├── cambium schema  (users, refresh_tokens — owned by Cambium)
+    └── rhizome schema  (domain tables — owned by Rhizome)
 ```
 
-Cambium and Rhizome are **separate processes**. Cambium does not import Rhizome
-as a library — it calls Rhizome over a well-defined internal interface (gRPC or
-HTTP). This keeps them independently deployable and language-agnostic.
+Cambium and Rhizome are **separate processes**. Cambium calls Rhizome over a
+well-defined internal HTTP interface (gRPC when streaming is needed). They share
+one Postgres instance under separate schemas.
 
 ---
 
@@ -43,90 +47,225 @@ HTTP). This keeps them independently deployable and language-agnostic.
 
 Go. Reasons:
 
-- Natural fit for HTTP gateway work: goroutines, standard library net/http,
-  fast and lightweight
-- Strong ecosystem for JWT auth (`golang-jwt`), password hashing (`bcrypt` via
-  `golang.org/x/crypto`), and gRPC clients
-- Single static binary, fast startup — fits the Spark hardware deployment model
+- Natural fit for HTTP gateway work: goroutines, fast startup, low memory
+- Strong standard library for JWT, bcrypt, AES crypto — minimal external dependencies
+- Single static binary — fits the Spark hardware deployment model
 - Good portfolio signal for infrastructure/backend roles
-- Fairlead (the inference router) may also be Go, giving consistent language
-  across the infrastructure layer
+- Fairlead (inference router) may also be Go
 
 ---
 
-## What Cambium owns
+## Database design
 
-- User registration and login (`POST /auth/register`, `POST /auth/login`)
-- JWT issuance (short-lived access tokens + long-lived refresh tokens)
-- Token refresh (`POST /auth/refresh`)
-- JWT verification middleware (runs on every protected route)
-- `users` table in Postgres (`id UUID`, `email`, `password_hash`, `created_at`)
-- Translation of incoming HTTP requests into Rhizome agent calls
-- Stable JSON DTOs for all app-facing resources (see Rhizome Epic 9 for the
-  full endpoint and payload inventory)
-- Media/file upload handling and asset metadata (for Epic 2)
+### Shared Postgres instance
 
-## What Cambium does not own
+One Postgres instance, two schemas — avoids running parallel databases on Spark
+hardware while maintaining clean ownership boundaries:
 
-- Domain logic of any kind (gardens, plants, tasks, triage — all Rhizome)
-- The Rhizome database schema or migrations
-- Inference capacity or model routing (Fairlead)
-- Frontend presentation logic (Verdant)
+```
+postgres (port 5432)
+  ├── cambium   — users, refresh_tokens
+  └── rhizome   — all domain tables
+```
+
+Cambium never queries the `rhizome` schema. Rhizome never queries `cambium`.
+Cross-schema reads are not needed because Cambium injects `user_id` into every
+Rhizome request — Rhizome scopes all queries to that ID.
+
+### `cambium.users`
+
+```sql
+CREATE TABLE cambium.users (
+    id                      UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    email                   TEXT UNIQUE NOT NULL,
+    password_hash           TEXT NOT NULL,           -- bcrypt, cost ≥ 12
+    preferred_provider      TEXT,                    -- 'gemini' | 'openai' | 'anthropic'
+    preferred_model         TEXT,                    -- optional e.g. 'gemini-1.5-pro'
+    encrypted_gemini_key    TEXT,                    -- AES-256-GCM ciphertext, nullable
+    encrypted_openai_key    TEXT,                    -- nullable
+    encrypted_anthropic_key TEXT,                    -- nullable
+    created_at              TIMESTAMP NOT NULL DEFAULT NOW()
+);
+```
+
+### `cambium.refresh_tokens`
+
+```sql
+CREATE TABLE cambium.refresh_tokens (
+    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id     UUID NOT NULL REFERENCES cambium.users(id),
+    token_hash  TEXT NOT NULL,
+    expires_at  TIMESTAMP NOT NULL,
+    created_at  TIMESTAMP NOT NULL DEFAULT NOW(),
+    revoked_at  TIMESTAMP
+);
+```
 
 ---
 
 ## Auth design
 
-Custom JWT auth — no third-party auth provider. Reasons:
+Custom JWT — no third-party provider. Reasons:
 
-- Full control over the auth stack and user data
-- Everything runs on owned hardware (Spark), no external auth traffic
+- Full control over auth stack and user data
+- Everything runs on owned hardware (Spark) — no external auth traffic
 - Educational value: implements the full backend auth lifecycle
 
-### Flow
+### Token flow
 
-1. `POST /auth/register` — hash password with bcrypt, insert user, issue tokens
+1. `POST /auth/register` — hash password with bcrypt (cost 12), insert user, issue tokens
 2. `POST /auth/login` — verify bcrypt hash, issue tokens
-3. Access token: short-lived JWT (15 min), carries `user_id` in `sub` claim
-4. Refresh token: long-lived (7–30 days), stored in `httpOnly` cookie,
-   rotated on each use
-5. Every protected route runs a JWT middleware that verifies the signature and
-   extracts `user_id`
-6. `user_id` is passed to Rhizome in the agent config for every call
+3. **Access token:** short-lived JWT (15 min), HS256, `user_id` in `sub` claim. Sent as `Authorization: Bearer <token>` header. Frontend stores in `localStorage`.
+4. **Refresh token:** long-lived (7–30 days), stored as a hash in `refresh_tokens`, sent as `httpOnly` cookie. Rotated on every use — on refresh, old token is revoked and a new one is issued atomically.
 
-### Algorithm
+### HS256 now, RS256 later
 
-HS256 (shared secret) for the initial implementation. Migrate to RS256
-(asymmetric) if Fairlead or other services need to independently verify tokens.
-
-### Libraries
-
-- `github.com/golang-jwt/jwt/v5` — JWT signing and verification
-- `golang.org/x/crypto/bcrypt` — password hashing
-- Standard library `net/http` or `gin` for routing
+HS256 (shared secret) for the initial implementation. Migrate to RS256 (asymmetric)
+if Fairlead or other services need to independently verify tokens without a shared
+secret.
 
 ---
 
-## Rhizome interface
+## Provider key storage
 
-Cambium calls Rhizome over an internal interface. Two candidate approaches:
+Users bring their own LLM API keys (Gemini, OpenAI, Anthropic). Cambium stores
+them encrypted so Rhizome can use the right key for each user without any user
+touching the server's `.env`.
 
-- **HTTP/JSON** — simpler to implement initially; Rhizome adds a minimal FastAPI
-  layer and Cambium calls it with a standard HTTP client
-- **gRPC** — lower overhead, typed contracts via protobuf, better for streaming
-  (relevant for streaming LLM responses); more setup
+### Encryption
 
-Start with HTTP, migrate to gRPC when streaming responses are needed.
+AES-256-GCM using Go's standard library `crypto/aes`. The master key is
+`CAMBIUM_ENCRYPTION_KEY` — a 32-byte server-side secret that never leaves
+Cambium and is never returned to clients.
+
+```
+plaintext key  →  AES-256-GCM(CAMBIUM_ENCRYPTION_KEY)  →  nonce || ciphertext
+```
+
+The nonce is prepended to the ciphertext and stored in a single `TEXT` column
+(hex or base64 encoded). On read: split nonce, decrypt.
+
+### Key management endpoints
+
+```
+PUT    /api/v1/auth/keys         { "provider": "gemini", "key": "AIza..." }
+GET    /api/v1/auth/keys         → { "gemini": true, "openai": false, "anthropic": false }
+DELETE /api/v1/auth/keys/gemini
+```
+
+Keys are **never returned** to the client. The GET endpoint only indicates which
+providers are configured. This way a compromised access token cannot leak the
+underlying API key.
+
+### Key injection into Rhizome requests
+
+On every proxied request, Cambium:
+1. Reads `preferred_provider` from the user row
+2. Decrypts the corresponding encrypted key
+3. Includes `provider` and `provider_key` in the Rhizome internal request body
+4. Never logs or caches the decrypted key
+
+Rhizome's model factory (`agent/core/model.py`) is updated to accept
+`provider` + `provider_key` from request context and falls back to env vars
+when running locally without Cambium.
+
+### Key rotation
+
+`CAMBIUM_ENCRYPTION_KEY` rotation requires re-encrypting all stored keys.
+Design a rotation script before storing real user keys in production. The
+rotation pattern: decrypt all keys with the old key, re-encrypt with the new
+key, rotate the env var, deploy atomically.
+
+---
+
+## Rhizome internal interface
+
+### Current: HTTP
+
+Rhizome's internal FastAPI service. Cambium calls it with:
+
+```json
+POST /internal/chat
+{
+  "user_id":      "abc-123",
+  "thread_id":    "thread-xyz",
+  "message":      "What should I do today?",
+  "provider":     "gemini",
+  "provider_key": "<decrypted — never logged>",
+  "model":        "gemini-1.5-flash"
+}
+```
+
+### Future: gRPC
+
+Migrate when streaming LLM responses are needed — gRPC supports bidirectional
+streaming natively. HTTP is fine for request/response flows.
+
+---
+
+## Build order
+
+### Phase 0 — Postgres setup (do this first, before writing Go)
+
+- Stand up Postgres locally: `docker run --name rhizome-pg -e POSTGRES_PASSWORD=dev -p 5432:5432 -d postgres`
+- Create schemas: `CREATE SCHEMA cambium; CREATE SCHEMA rhizome;`
+- Migrate Rhizome: update `db/database.py` to read `DATABASE_URL`, swap `SqliteSaver` → `langgraph-checkpoint-postgres`
+- Verify Rhizome tests still pass (test suite uses in-memory SQLite, unaffected)
+
+### Phase 1 — Go project skeleton
+
+- `go mod init github.com/ybordag/cambium`
+- Directory structure:
+  ```
+  cmd/server/       — main.go, entry point
+  internal/auth/    — JWT, bcrypt, AES key encryption
+  internal/api/     — HTTP handlers, route registration
+  internal/rhizome/ — HTTP client that calls Rhizome internal API
+  internal/db/      — Postgres connection, user/token queries
+  ```
+- Basic `net/http` server returning 200 on `/health`
+- Postgres connection (pgx or database/sql + lib/pq)
+- `cambium` schema migrations (users + refresh_tokens)
+
+### Phase 2 — Auth + key management
+
+- Register, login, refresh, session endpoints
+- JWT middleware (handler wrapper, not inline)
+- Key management: PUT/GET/DELETE `/api/v1/auth/keys` with AES-256-GCM
+- Tests: full register → login → refresh → protected route flow
+- Tests: set key, verify configured, delete key, verify unconfigured
+
+### Phase 3 — Rhizome proxy
+
+- HTTP client for Rhizome internal FastAPI
+- Middleware pipeline: JWT verify → decrypt provider key → build Rhizome request
+- Stub proxy endpoints (`/api/v1/triage/latest`, `/api/v1/tasks/daily`)
+- End-to-end: login → set key → call protected route → Rhizome uses user's key
+
+### Phase 4 — Full API surface
+
+- All endpoints from the planned surface in CLAUDE.md
+- Media upload stubs (full implementation waits for Epic 2)
+- API contract tests
 
 ---
 
 ## Open questions
 
-- Should the `users` table live in the same Postgres instance as the Rhizome
-  tables, or a separate database? (Same instance is simpler; separate is cleaner
-  separation of ownership)
-- HTTP or gRPC for the Cambium → Rhizome internal interface?
-- Should access tokens be stored in `localStorage` or `httpOnly` cookies on the
-  frontend? (localStorage is simpler but XSS-vulnerable; httpOnly cookie is more
-  secure but adds CSRF complexity)
-- Rate limiting strategy for auth endpoints (to prevent brute-force attacks)
+1. **Rate limiting** — auth endpoints need brute-force protection. `golang.org/x/time/rate` or a middleware library. Decide before Phase 2 ships.
+
+2. **`CAMBIUM_ENCRYPTION_KEY` rotation** — design the re-encryption script before going to production. See Key rotation section above.
+
+3. **gRPC migration trigger** — switch when Verdant needs token streaming. No action needed now.
+
+---
+
+## Resolved design decisions
+
+| Question | Decision | Rationale |
+|---|---|---|
+| `users` table location | Same Postgres instance, `cambium` schema | Simpler to operate on Spark hardware; single backup; no cross-service joins needed |
+| Refresh token storage | Separate `refresh_tokens` table | Supports multiple devices/sessions; easy to list and revoke all sessions |
+| Access token delivery | `Authorization: Bearer` header; frontend stores in `localStorage` | Standard REST pattern; simpler CORS setup; acceptable XSS trade-off for a portfolio project |
+| Provider key storage | Encrypted in `users` table (AES-256-GCM) | Keys at rest are never plaintext; keys are never returned to the client |
+| Postgres shared vs. separate | Shared instance, separate schemas | One Docker container on Spark; single backup target; Cambium and Rhizome stay independently deployable |
