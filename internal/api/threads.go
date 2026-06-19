@@ -13,12 +13,19 @@ type threadHandler struct {
 	rhizome *rhizome.Client
 }
 
-// createThread generates a botanical thread ID, registers it with Rhizome,
-// and returns it to the client. The client uses it for all subsequent chat calls.
+// createThread generates a botanical three-word thread ID, registers it with
+// Rhizome, and returns it. Use this before the first chat message.
 //
-// POST /api/v1/threads
-// Body (optional): { "title": "...", "project_id": "..." }
-// Response: { "thread_id": "silver-fern-cascade" }
+//	@Summary	Create conversation thread
+//	@Tags		threads
+//	@Accept		json
+//	@Produce	json
+//	@Security	BearerAuth
+//	@Param		body	body		CreateThreadRequest	false	"Optional title and project link"
+//	@Success	200		{object}	ThreadIDResponse	"Botanical thread ID e.g. silver-fern-cascade"
+//	@Failure	401		{object}	ErrorResponse
+//	@Failure	502		{object}	ErrorResponse
+//	@Router		/api/v1/threads [post]
 func (h *threadHandler) createThread(w http.ResponseWriter, r *http.Request) {
 	userID, _ := UserIDFromContext(r.Context())
 

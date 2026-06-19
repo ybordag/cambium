@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	httpSwagger "github.com/swaggo/http-swagger"
 )
 
 // NewRouter wires all routes and returns the root handler.
@@ -223,6 +224,12 @@ func NewRouter(pool *pgxpool.Pool) http.Handler {
 
 	mux.Handle("POST /api/v1/media", RequireAuth(http.HandlerFunc(notImplemented)))
 	mux.Handle("GET /api/v1/media/{id}", RequireAuth(http.HandlerFunc(notImplemented)))
+
+	// -------------------------------------------------------------------------
+	// Swagger UI — /docs/
+	// -------------------------------------------------------------------------
+
+	mux.Handle("GET /docs/", httpSwagger.WrapHandler)
 
 	return mux
 }

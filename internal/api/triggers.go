@@ -10,6 +10,19 @@ import (
 
 // triggerTriage sends a pre-built triage request to the Rhizome agent.
 // POST /api/v1/triage/run  { "thread_id": "..." }
+// triggerTriage asks the agent to run daily triage and return task recommendations.
+//
+//	@Summary	Run daily triage (AI)
+//	@Tags		triage
+//	@Accept		json
+//	@Produce	json
+//	@Security	BearerAuth
+//	@Param		body	body		ResumeRequestBody	true	"thread_id required"
+//	@Success	200		{object}	ChatResponse
+//	@Failure	400		{object}	ErrorResponse
+//	@Failure	401		{object}	ErrorResponse
+//	@Failure	502		{object}	ErrorResponse
+//	@Router		/api/v1/triage/run [post]
 func (h *proxyHandler) triggerTriage(w http.ResponseWriter, r *http.Request) {
 	userID, _ := UserIDFromContext(r.Context())
 	threadID := threadIDFromBody(r)
@@ -35,6 +48,19 @@ func (h *proxyHandler) triggerTriage(w http.ResponseWriter, r *http.Request) {
 
 // triggerWeatherDraft sends a weather impact draft request to the agent.
 // POST /api/v1/weather/tasks/draft  { "thread_id": "..." }
+// triggerWeatherDraft asks the agent to draft weather-driven task changes.
+//
+//	@Summary	Draft weather task changes (AI)
+//	@Tags		weather
+//	@Accept		json
+//	@Produce	json
+//	@Security	BearerAuth
+//	@Param		body	body		ResumeRequestBody	true	"thread_id required"
+//	@Success	200		{object}	ChatResponse
+//	@Failure	400		{object}	ErrorResponse
+//	@Failure	401		{object}	ErrorResponse
+//	@Failure	502		{object}	ErrorResponse
+//	@Router		/api/v1/weather/tasks/draft [post]
 func (h *proxyHandler) triggerWeatherDraft(w http.ResponseWriter, r *http.Request) {
 	userID, _ := UserIDFromContext(r.Context())
 	threadID := threadIDFromBody(r)
@@ -60,6 +86,20 @@ func (h *proxyHandler) triggerWeatherDraft(w http.ResponseWriter, r *http.Reques
 
 // triggerTreatmentDraft asks the agent to draft a treatment plan for an incident.
 // POST /api/v1/incidents/{id}/treatment  { "thread_id": "..." }
+// triggerTreatmentDraft asks the agent to draft a treatment plan for an incident.
+//
+//	@Summary	Draft treatment plan (AI)
+//	@Tags		incidents
+//	@Accept		json
+//	@Produce	json
+//	@Security	BearerAuth
+//	@Param		id		path		string				true	"Incident ID"
+//	@Param		body	body		ResumeRequestBody	true	"thread_id required"
+//	@Success	200		{object}	ChatResponse
+//	@Failure	400		{object}	ErrorResponse
+//	@Failure	401		{object}	ErrorResponse
+//	@Failure	502		{object}	ErrorResponse
+//	@Router		/api/v1/incidents/{id}/treatment [post]
 func (h *proxyHandler) triggerTreatmentDraft(w http.ResponseWriter, r *http.Request) {
 	userID, _ := UserIDFromContext(r.Context())
 	incidentID := r.PathValue("id")
@@ -86,6 +126,20 @@ func (h *proxyHandler) triggerTreatmentDraft(w http.ResponseWriter, r *http.Requ
 
 // triggerTaskGeneration asks the agent to generate tasks for a project.
 // POST /api/v1/projects/{id}/tasks/generate  { "thread_id": "..." }
+// triggerTaskGeneration asks the agent to generate the initial task plan for a project.
+//
+//	@Summary	Generate project tasks (AI)
+//	@Tags		projects
+//	@Accept		json
+//	@Produce	json
+//	@Security	BearerAuth
+//	@Param		id		path		string				true	"Project ID"
+//	@Param		body	body		ResumeRequestBody	true	"thread_id required"
+//	@Success	200		{object}	ChatResponse
+//	@Failure	400		{object}	ErrorResponse
+//	@Failure	401		{object}	ErrorResponse
+//	@Failure	502		{object}	ErrorResponse
+//	@Router		/api/v1/projects/{id}/tasks/generate [post]
 func (h *proxyHandler) triggerTaskGeneration(w http.ResponseWriter, r *http.Request) {
 	userID, _ := UserIDFromContext(r.Context())
 	projectID := r.PathValue("id")

@@ -15,6 +15,17 @@ type authHandler struct {
 	pool *pgxpool.Pool
 }
 
+// register creates a new user account and returns tokens.
+//
+//	@Summary	Register
+//	@Tags		auth
+//	@Accept		json
+//	@Produce	json
+//	@Param		body	body		RegisterRequest	true	"Email and password"
+//	@Success	200		{object}	TokenResponse	"Access token in body; refresh token in httpOnly cookie"
+//	@Failure	400		{object}	ErrorResponse
+//	@Failure	409		{object}	ErrorResponse	"Email already registered"
+//	@Router		/auth/register [post]
 func (h *authHandler) register(w http.ResponseWriter, r *http.Request) {
 	var body struct {
 		Email    string `json:"email"`
@@ -44,6 +55,17 @@ func (h *authHandler) register(w http.ResponseWriter, r *http.Request) {
 	h.issueTokenPair(w, r, userID)
 }
 
+// login authenticates an existing user and returns tokens.
+//
+//	@Summary	Login
+//	@Tags		auth
+//	@Accept		json
+//	@Produce	json
+//	@Param		body	body		LoginRequest	true	"Email and password"
+//	@Success	200		{object}	TokenResponse	"Access token in body; refresh token in httpOnly cookie"
+//	@Failure	400		{object}	ErrorResponse
+//	@Failure	401		{object}	ErrorResponse	"Invalid credentials"
+//	@Router		/auth/login [post]
 func (h *authHandler) login(w http.ResponseWriter, r *http.Request) {
 	var body struct {
 		Email    string `json:"email"`
@@ -72,6 +94,14 @@ func (h *authHandler) login(w http.ResponseWriter, r *http.Request) {
 	h.issueTokenPair(w, r, user.ID)
 }
 
+// refresh rotates the refresh token and returns a new access token.
+//
+//	@Summary	Refresh tokens
+//	@Tags		auth
+//	@Produce	json
+//	@Success	200	{object}	TokenResponse	"New access token; new refresh token in httpOnly cookie"
+//	@Failure	401	{object}	ErrorResponse	"Refresh token missing, expired, or revoked"
+//	@Router		/auth/refresh [post]
 func (h *authHandler) refresh(w http.ResponseWriter, r *http.Request) {
 	cookie, err := r.Cookie("refresh_token")
 	if err != nil {
@@ -103,6 +133,15 @@ func (h *authHandler) refresh(w http.ResponseWriter, r *http.Request) {
 	h.issueTokenPair(w, r, stored.UserID)
 }
 
+// session returns the authenticated user's profile.
+//
+//	@Summary	Session
+//	@Tags		auth
+//	@Produce	json
+//	@Security	BearerAuth
+//	@Success	200	{object}	SessionResponse
+//	@Failure	401	{object}	ErrorResponse
+//	@Router		/auth/session [get]
 func (h *authHandler) session(w http.ResponseWriter, r *http.Request) {
 	userID, ok := UserIDFromContext(r.Context())
 	if !ok {
@@ -126,6 +165,13 @@ func (h *authHandler) session(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// logout revokes the current refresh token.
+//
+//	@Summary	Logout
+//	@Tags		auth
+//	@Produce	json
+//	@Success	200	{object}	LogoutResponse
+//	@Router		/auth/logout [post]
 func (h *authHandler) logout(w http.ResponseWriter, r *http.Request) {
 	cookie, err := r.Cookie("refresh_token")
 	if err == nil {
