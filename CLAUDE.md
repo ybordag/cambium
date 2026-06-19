@@ -40,11 +40,11 @@ No virtual environment needed — Go resolves dependencies from `go.mod`/`go.sum
 
 ## Current status
 
-- **Phase 0** ✓ — Postgres 16 in Docker (`rhizome-pg`, port 5432), Rhizome migrated, 325 tests passing
-- **Phase 1** ✓ — Go module, `/health`, pgxpool connection, cambium schema migrations
-- **Phase 2** ✓ — auth endpoints, JWT middleware, AES-256-GCM key management (lenticel, commit b77a850)
-- **Phase 3** in progress (`lenticel` branch) — Rhizome HTTP client, JWT→user_id + provider_key injection, stub data + agent proxy endpoints
-- **Phase 4** pending — full API surface
+- **Phase 0** ✓ — Postgres 16 in Docker (`rhizome-pg`, port 5432), Rhizome migrated, 408 tests passing
+- **Phase 1** ✓ — Go module, `/health`, pgxpool connection, cambium schema migrations (main, commit 0f06cc8)
+- **Phase 2** ✓ — auth endpoints, JWT middleware, AES-256-GCM key management (lenticel → main, commit 5ee7575)
+- **Phase 3** ✓ — Rhizome HTTP client, SSE streaming proxy, provider key injection, partial route wiring (phloem → main, commit 1d3bc74)
+- **Phase 4** in progress (`periderm` branch) — full route wiring, AI-trigger endpoints, thread management
 
 ## Project layout
 
@@ -69,7 +69,8 @@ internal/
     migrations.go        — idempotent cambium schema + users + refresh_tokens
     users.go             — user queries: insert, get by email, get by id, update keys
     tokens.go            — refresh token queries: insert, get by hash, revoke
-  rhizome/               — HTTP client for Rhizome internal API (Phase 3)
+  rhizome/
+    client.go            — HTTP client: RunAgent, StreamAgent, ResumeAgent, StreamResume, DataGet, DataPost
 docs/
   design.md              — full architecture and design decisions
 ```
@@ -77,10 +78,11 @@ docs/
 ## Environment variables
 
 ```
-DATABASE_URL            — postgres connection string (required)
-JWT_SECRET              — HS256 signing secret, min 32 bytes (required)
-CAMBIUM_ENCRYPTION_KEY  — 32-byte AES-256-GCM master key for provider keys (required)
-PORT                    — HTTP listen port (default: 8080)
+DATABASE_URL             — Postgres connection string (required)
+JWT_SECRET               — HS256 signing secret, min 32 bytes (required)
+CAMBIUM_ENCRYPTION_KEY   — 32-byte AES-256-GCM master key for provider keys (required)
+RHIZOME_INTERNAL_URL     — Rhizome internal API base URL (default: http://localhost:8001)
+PORT                     — HTTP listen port (default: 8080)
 ```
 
 ## Database design
@@ -441,23 +443,20 @@ GET    /api/v1/media/{id}
 - `internal/api/`: middleware.go, context.go, auth.go, keys.go, respond.go
 - 21 tests passing
 
-**Phase 3 — Rhizome proxy** (lenticel branch)
-- `internal/rhizome/client.go` — HTTP client for Rhizome internal FastAPI
-- Middleware pipeline: JWT verify → decrypt provider key → build Rhizome request
-- Agent proxy: POST /api/v1/chat → /internal/agent
-- Data proxy: GET/POST /api/v1/... → /internal/data/...
-- Stub endpoints for all planned routes; full wiring as Rhizome FastAPI layer is built
+**Phase 3 — Rhizome proxy** ✓ done (phloem → main, commit 1d3bc74)
+- `internal/rhizome/client.go`: RunAgent, StreamAgent, ResumeAgent, StreamResume, DataGet, DataPost
+- `internal/api/proxy.go`: providerKey() decrypts preferred key; proxySSE() forwards SSE streams
+- Chat endpoints (streaming + non-streaming + resume), alerts, tasks (partial), projects (partial), monitor runs
+- 5 client tests; 26 total tests passing
 
-**Phase 3 — Rhizome proxy**
-- HTTP client that calls Rhizome's internal FastAPI
-- JWT middleware extracts `user_id`, decrypts provider key, passes both in Rhizome request
-- Rhizome model factory updated to accept `provider` + `provider_key` from request context
-- Stub `/api/v1/triage/latest` and `/api/v1/tasks` that proxy to Rhizome
-- End-to-end test: login → set key → call protected route → Rhizome responds
-
-**Phase 4 — Full API surface**
-- Implement remaining endpoints from the planned API surface above
-- Media upload handling (stubs for now, full implementation in Epic 2)
+**Phase 4 — Full API surface** (periderm branch)
+- Wire remaining proxy routes: garden (profile, beds, containers, plants, batches, search, care),
+  projects (CRUD, brief, proposals, assignment), tasks (start, update, due, blocked, series),
+  triage, weather, incidents + treatment, interactions, activity global feed
+- AI-trigger endpoints: POST /api/v1/triage/run, /weather/tasks/draft, /incidents/{id}/treatment,
+  /projects/{id}/tasks/generate — dedicated handlers that form pre-built agent requests
+- Thread management: POST/GET /api/v1/threads — requires narcissus work in Rhizome
+- Media upload stubs
 - API contract tests
 
 ## Invariants — never violate
