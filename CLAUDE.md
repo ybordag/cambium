@@ -42,8 +42,8 @@ No virtual environment needed — Go resolves dependencies from `go.mod`/`go.sum
 
 - **Phase 0** ✓ — Postgres 16 in Docker (`rhizome-pg`, port 5432), Rhizome migrated, 325 tests passing
 - **Phase 1** ✓ — Go module, `/health`, pgxpool connection, cambium schema migrations
-- **Phase 2** in progress (`lenticel` branch) — auth endpoints, JWT middleware, AES-256-GCM key management
-- **Phase 3** pending — Rhizome proxy, provider key injection
+- **Phase 2** ✓ — auth endpoints, JWT middleware, AES-256-GCM key management (lenticel, commit b77a850)
+- **Phase 3** in progress (`lenticel` branch) — Rhizome HTTP client, JWT→user_id + provider_key injection, stub data + agent proxy endpoints
 - **Phase 4** pending — full API surface
 
 ## Project layout
@@ -272,6 +272,17 @@ POST /api/v1/media
 GET  /api/v1/media/{id}
 ```
 
+Alerts + monitor (calendula — phases 1–4):
+```
+GET    /api/v1/alerts                  — active (pending, non-expired) alerts for this user
+POST   /api/v1/alerts/{id}/dismiss     — dismiss an alert
+POST   /api/v1/weather/monitor         — manually trigger weather_job
+POST   /api/v1/triage/monitor          — manually trigger triage_job
+POST   /api/v1/tasks/series/run        — manually trigger series materialization
+GET    /api/v1/monitor/runs            — recent MonitorRun records (health/debug)
+GET    /api/v1/monitor/runs/{id}       — specific run status and summary
+```
+
 ## Recommended build order
 
 **Phase 0 — Postgres setup** ✓ done
@@ -285,12 +296,18 @@ GET  /api/v1/media/{id}
 - `GET /health` returns `{"status":"ok"}`
 - pgxpool Postgres connection, cambium schema migrations at startup
 
-**Phase 2 — Auth endpoints + key management** (lenticel branch)
+**Phase 2 — Auth endpoints + key management** ✓ done (lenticel, commit b77a850)
 - `internal/auth/`: jwt.go, password.go, crypto.go
 - `internal/db/`: users.go, tokens.go
-- `internal/api/`: middleware.go, context.go, auth.go, keys.go
-- Endpoints: register, login, refresh, session, logout, PUT/GET/DELETE /api/v1/auth/keys
-- Tests: register→login→refresh→logout flow, wrong password, expired token, key lifecycle
+- `internal/api/`: middleware.go, context.go, auth.go, keys.go, respond.go
+- 21 tests passing
+
+**Phase 3 — Rhizome proxy** (lenticel branch)
+- `internal/rhizome/client.go` — HTTP client for Rhizome internal FastAPI
+- Middleware pipeline: JWT verify → decrypt provider key → build Rhizome request
+- Agent proxy: POST /api/v1/chat → /internal/agent
+- Data proxy: GET/POST /api/v1/... → /internal/data/...
+- Stub endpoints for all planned routes; full wiring as Rhizome FastAPI layer is built
 
 **Phase 3 — Rhizome proxy**
 - HTTP client that calls Rhizome's internal FastAPI
