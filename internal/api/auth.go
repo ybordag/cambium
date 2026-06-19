@@ -222,3 +222,88 @@ func (h *authHandler) issueTokenPair(w http.ResponseWriter, r *http.Request, use
 
 	writeJSON(w, http.StatusOK, map[string]string{"access_token": accessToken})
 }
+
+// profile updates the authenticated user's preferred provider and/or model.
+//
+//	@Summary	Update profile
+//	@Tags		auth
+//	@Accept		json
+//	@Produce	json
+//	@Param		Authorization	header		string				true	"Bearer token"
+//	@Param		body			body		object				true	"Fields to update"
+//	@Success	200				{object}	SessionResponse
+//	@Failure	400				{object}	ErrorResponse
+//	@Router		/auth/profile [patch]
+func (h *authHandler) profile(w http.ResponseWriter, r *http.Request) {
+	userID, _ := UserIDFromContext(r.Context())
+	var body struct {
+		PreferredProvider *string `json:"preferred_provider"`
+		PreferredModel    *string `json:"preferred_model"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	if body.PreferredProvider == nil && body.PreferredModel == nil {
+		writeError(w, http.StatusBadRequest, "at least one field required: preferred_provider, preferred_model")
+		return
+	}
+	if err := db.UpdateProfile(r.Context(), h.pool, userID, body.PreferredProvider, body.PreferredModel); err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to update profile")
+		return
+	}
+	user, err := db.GetUserByID(r.Context(), h.pool, userID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to fetch updated user")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"user_id":            user.ID,
+		"email":              user.Email,
+		"preferred_provider": user.PreferredProvider,
+		"preferred_model":    user.PreferredModel,
+	})
+}
+
+// password changes the authenticated user's password after verifying the current one.
+//
+//	@Summary	Change password
+//	@Tags		auth
+//	@Accept		json
+//	@Produce	json
+//	@Param		Authorization	header		string	true	"Bearer token"
+//	@Param		body			body		object	true	"Current and new password"
+//	@Success	200				{object}	object
+//	@Failure	400				{object}	ErrorResponse
+//	@Failure	401				{object}	ErrorResponse	"Wrong current password"
+//	@Router		/auth/password [post]
+func (h *authHandler) password(w http.ResponseWriter, r *http.Request) {
+	userID, _ := UserIDFromContext(r.Context())
+	var body struct {
+		CurrentPassword string `json:"current_password"`
+		NewPassword     string `json:"new_password"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil || body.CurrentPassword == "" || body.NewPassword == "" {
+		writeError(w, http.StatusBadRequest, "current_password and new_password required")
+		return
+	}
+	user, err := db.GetUserByID(r.Context(), h.pool, userID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to fetch user")
+		return
+	}
+	if err := auth.CheckPassword(user.PasswordHash, body.CurrentPassword); err != nil {
+		writeError(w, http.StatusUnauthorized, "invalid credentials")
+		return
+	}
+	newHash, err := auth.HashPassword(body.NewPassword)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to hash password")
+		return
+	}
+	if err := db.UpdatePassword(r.Context(), h.pool, userID, newHash); err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to update password")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]string{"status": "password updated"})
+}

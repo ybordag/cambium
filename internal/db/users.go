@@ -127,6 +127,38 @@ func providerColumn(provider string) (string, error) {
 	}
 }
 
+// UpdateProfile sets preferred_provider and/or preferred_model on the user row.
+// Pass nil for fields that should not change.
+func UpdateProfile(ctx context.Context, pool *pgxpool.Pool, userID string, provider, model *string) error {
+	if provider == nil && model == nil {
+		return nil
+	}
+	if provider != nil && model != nil {
+		_, err := pool.Exec(ctx,
+			`UPDATE cambium.users SET preferred_provider = $1, preferred_model = $2 WHERE id = $3`,
+			*provider, *model, userID)
+		return err
+	}
+	if provider != nil {
+		_, err := pool.Exec(ctx,
+			`UPDATE cambium.users SET preferred_provider = $1 WHERE id = $2`,
+			*provider, userID)
+		return err
+	}
+	_, err := pool.Exec(ctx,
+		`UPDATE cambium.users SET preferred_model = $1 WHERE id = $2`,
+		*model, userID)
+	return err
+}
+
+// UpdatePassword replaces the stored bcrypt hash for the given user.
+func UpdatePassword(ctx context.Context, pool *pgxpool.Pool, userID, newHash string) error {
+	_, err := pool.Exec(ctx,
+		`UPDATE cambium.users SET password_hash = $1 WHERE id = $2`,
+		newHash, userID)
+	return err
+}
+
 func isUniqueViolation(err error) bool {
 	return err != nil && fmt.Sprintf("%v", err) != "" &&
 		containsStr(err.Error(), "23505")

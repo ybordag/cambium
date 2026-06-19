@@ -30,6 +30,8 @@ func NewRouter(pool *pgxpool.Pool) http.Handler {
 	// -------------------------------------------------------------------------
 
 	mux.Handle("GET /auth/session", RequireAuth(http.HandlerFunc(ah.session)))
+	mux.Handle("PATCH /auth/profile", RequireAuth(http.HandlerFunc(ah.profile)))
+	mux.Handle("POST /auth/password", RequireAuth(http.HandlerFunc(ah.password)))
 	mux.Handle("PUT /api/v1/auth/keys", RequireAuth(http.HandlerFunc(kh.set)))
 	mux.Handle("GET /api/v1/auth/keys", RequireAuth(http.HandlerFunc(kh.list)))
 	mux.Handle("DELETE /api/v1/auth/keys/{provider}", RequireAuth(http.HandlerFunc(kh.delete)))
@@ -61,6 +63,7 @@ func NewRouter(pool *pgxpool.Pool) http.Handler {
 	mux.Handle("DELETE /api/v1/garden/beds/{id}", RequireAuth(ph.proxyDataWithPathParam("garden/beds", "id")))
 	mux.Handle("GET /api/v1/garden/beds/{id}/care/state", RequireAuth(ph.proxyDataWithPathParam("garden/beds", "id")))
 	mux.Handle("GET /api/v1/garden/beds/{id}/care/history", RequireAuth(ph.proxyDataWithPathParam("garden/beds", "id")))
+	mux.Handle("POST /api/v1/garden/beds/{id}/care", RequireAuth(ph.proxyDataWithPathParam("garden/beds", "id")))
 	mux.Handle("GET /api/v1/garden/beds/{id}/activity", RequireAuth(ph.proxyDataWithPathParam("garden/beds", "id")))
 
 	// -------------------------------------------------------------------------
@@ -74,6 +77,7 @@ func NewRouter(pool *pgxpool.Pool) http.Handler {
 	mux.Handle("DELETE /api/v1/garden/containers/{id}", RequireAuth(ph.proxyDataWithPathParam("garden/containers", "id")))
 	mux.Handle("GET /api/v1/garden/containers/{id}/care/state", RequireAuth(ph.proxyDataWithPathParam("garden/containers", "id")))
 	mux.Handle("GET /api/v1/garden/containers/{id}/care/history", RequireAuth(ph.proxyDataWithPathParam("garden/containers", "id")))
+	mux.Handle("POST /api/v1/garden/containers/{id}/care", RequireAuth(ph.proxyDataWithPathParam("garden/containers", "id")))
 	mux.Handle("GET /api/v1/garden/containers/{id}/activity", RequireAuth(ph.proxyDataWithPathParam("garden/containers", "id")))
 
 	// -------------------------------------------------------------------------
@@ -91,6 +95,7 @@ func NewRouter(pool *pgxpool.Pool) http.Handler {
 	mux.Handle("DELETE /api/v1/garden/plants/{id}", RequireAuth(ph.proxyDataWithPathParam("garden/plants", "id")))
 	mux.Handle("GET /api/v1/garden/plants/{id}/care/state", RequireAuth(ph.proxyDataWithPathParam("garden/plants", "id")))
 	mux.Handle("GET /api/v1/garden/plants/{id}/care/history", RequireAuth(ph.proxyDataWithPathParam("garden/plants", "id")))
+	mux.Handle("POST /api/v1/garden/plants/{id}/care", RequireAuth(ph.proxyDataWithPathParam("garden/plants", "id")))
 	mux.Handle("GET /api/v1/garden/plants/{id}/activity", RequireAuth(ph.proxyDataWithPathParam("garden/plants", "id")))
 
 	// -------------------------------------------------------------------------
@@ -197,10 +202,15 @@ func NewRouter(pool *pgxpool.Pool) http.Handler {
 	mux.Handle("GET /api/v1/incidents", RequireAuth(http.HandlerFunc(ph.proxyData("incidents"))))
 	mux.Handle("POST /api/v1/incidents", RequireAuth(http.HandlerFunc(ph.proxyData("incidents"))))
 	mux.Handle("GET /api/v1/incidents/{id}", RequireAuth(ph.proxyDataWithPathParam("incidents", "id")))
+	mux.Handle("PATCH /api/v1/incidents/{id}", RequireAuth(ph.proxyDataWithPathParam("incidents", "id")))
+	mux.Handle("DELETE /api/v1/incidents/{id}", RequireAuth(ph.proxyDataWithPathParam("incidents", "id")))
 	mux.Handle("PATCH /api/v1/incidents/{id}/resolve", RequireAuth(ph.proxyDataWithPathParam("incidents", "id")))
 	mux.Handle("POST /api/v1/incidents/{id}/treatment", RequireAuth(http.HandlerFunc(ph.triggerTreatmentDraft)))
+	mux.Handle("POST /api/v1/incidents/{id}/treatment/manual", RequireAuth(ph.proxyDataWithPathParam("incidents", "id")))
 	mux.Handle("GET /api/v1/incidents/{id}/treatment", RequireAuth(ph.proxyDataWithPathParam("incidents", "id")))
 	mux.Handle("GET /api/v1/incidents/{id}/activity", RequireAuth(ph.proxyDataWithPathParam("incidents", "id")))
+	mux.Handle("PATCH /api/v1/treatment-plans/{id}", RequireAuth(ph.proxyDataWithPathParam("treatment-plans", "id")))
+	mux.Handle("DELETE /api/v1/treatment-plans/{id}", RequireAuth(ph.proxyDataWithPathParam("treatment-plans", "id")))
 	mux.Handle("PATCH /api/v1/treatment-plans/{id}/approve", RequireAuth(ph.proxyDataWithPathParam("treatment-plans", "id")))
 
 	// -------------------------------------------------------------------------

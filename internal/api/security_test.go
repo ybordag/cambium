@@ -17,6 +17,8 @@ func TestAllProtectedRoutesReject401(t *testing.T) {
 	}{
 		// Auth (protected)
 		{"GET", "/auth/session"},
+		{"PATCH", "/auth/profile"},
+		{"POST", "/auth/password"},
 
 		// Keys
 		{"PUT", "/api/v1/auth/keys"},
@@ -97,6 +99,16 @@ func TestAllProtectedRoutesReject401(t *testing.T) {
 		// Incidents
 		{"GET", "/api/v1/incidents"},
 		{"POST", "/api/v1/incidents"},
+		{"PATCH", "/api/v1/incidents/some-id"},
+		{"DELETE", "/api/v1/incidents/some-id"},
+		{"POST", "/api/v1/incidents/some-id/treatment/manual"},
+		{"PATCH", "/api/v1/treatment-plans/some-id"},
+		{"DELETE", "/api/v1/treatment-plans/some-id"},
+
+		// Quick care
+		{"POST", "/api/v1/garden/plants/some-id/care"},
+		{"POST", "/api/v1/garden/beds/some-id/care"},
+		{"POST", "/api/v1/garden/containers/some-id/care"},
 
 		// Interactions
 		{"GET", "/api/v1/interactions/pending"},
