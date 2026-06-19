@@ -8,3 +8,4 @@ cambium
 # Go
 *.test
 *.out
+k8s/secrets.yaml
