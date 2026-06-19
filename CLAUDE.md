@@ -44,7 +44,8 @@ No virtual environment needed — Go resolves dependencies from `go.mod`/`go.sum
 - **Phase 1** ✓ — Go module, `/health`, pgxpool connection, cambium schema migrations (main, commit 0f06cc8)
 - **Phase 2** ✓ — auth endpoints, JWT middleware, AES-256-GCM key management (lenticel → main, commit 5ee7575)
 - **Phase 3** ✓ — Rhizome HTTP client, SSE streaming proxy, provider key injection, partial route wiring (phloem → main, commit 1d3bc74)
-- **Phase 4** in progress (`periderm` branch) — full route wiring, AI-trigger endpoints, thread management
+- **Phase 4** ✓ — full route wiring, AI-trigger endpoints, media stubs, full docs (periderm → main, commit 6a916a6)
+- **Phase 5** in progress (`fibril` branch) — thread management: botanical name generator, POST/GET/DELETE /api/v1/threads
 
 ## Project layout
 
@@ -449,15 +450,19 @@ GET    /api/v1/media/{id}
 - Chat endpoints (streaming + non-streaming + resume), alerts, tasks (partial), projects (partial), monitor runs
 - 5 client tests; 26 total tests passing
 
-**Phase 4 — Full API surface** (periderm branch)
-- Wire remaining proxy routes: garden (profile, beds, containers, plants, batches, search, care),
-  projects (CRUD, brief, proposals, assignment), tasks (start, update, due, blocked, series),
-  triage, weather, incidents + treatment, interactions, activity global feed
-- AI-trigger endpoints: POST /api/v1/triage/run, /weather/tasks/draft, /incidents/{id}/treatment,
-  /projects/{id}/tasks/generate — dedicated handlers that form pre-built agent requests
-- Thread management: POST/GET /api/v1/threads — requires narcissus work in Rhizome
-- Media upload stubs
-- API contract tests
+**Phase 4 — Full API surface** ✓ done (periderm → main, commit 6a916a6)
+- All ~95 endpoints wired; AI-trigger handlers (triage, weather draft, treatment draft, task gen)
+- Media stubs (501); comprehensive docs (setup, architecture, auth flow, request lifecycle, roadmap)
+
+**Phase 5 — Thread management** (fibril branch)
+- `internal/api/threadnames.go`: three botanical word lists + generateThreadID()
+  (31 descriptors × 41 plants × 36 phenomena ≈ 45,700 unique combinations)
+- `POST /api/v1/threads`: generate botanical ID, register with Rhizome, return thread_id
+- `GET /api/v1/threads`: list user's conversations (proxy to Rhizome)
+- `GET /api/v1/threads/{id}`: thread metadata + preview (proxy)
+- `GET /api/v1/threads/{id}/messages`: full history from LangGraph checkpoint (proxy)
+- `DELETE /api/v1/threads/{id}`: delete thread (proxy)
+- Requires narcissus (Rhizome): Thread model + session_context_intake update + data endpoints
 
 ## Invariants — never violate
 
