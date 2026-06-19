@@ -16,7 +16,7 @@ See `docs/design.md` for the full architecture and design decisions.
 
 - **Rhizome** (Python) — the agent and domain engine. Cambium calls it over HTTP.
 - **Verdant** — React frontend. Calls Cambium over `/api/v1`.
-- **Fairlead** (Rust) — inference router. Phases 1–3 complete (on main); Phase 4 fallback chain in progress (spinnaker branch).
+- **Fairlead** (Rust) — inference router. Phases 1–4 complete (on main); Phase 5 VRAM accounting pending.
 
 ## Tech stack
 
