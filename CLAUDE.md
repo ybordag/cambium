@@ -20,12 +20,12 @@ See `docs/design.md` for the full architecture and design decisions.
 
 ## Tech stack
 
-- **Language:** Go 1.24
+- **Language:** Go 1.25
 - **Routing:** standard library `net/http` (Go 1.22+ enhanced ServeMux with method+path patterns)
 - **Database driver:** `github.com/jackc/pgx/v5` (connection pooling via `pgxpool`)
-- **JWT:** `github.com/golang-jwt/jwt/v5` (Phase 2)
-- **Password hashing:** `golang.org/x/crypto/bcrypt` (Phase 2)
-- **Key encryption:** AES-256-GCM via standard library `crypto/aes` (Phase 2)
+- **JWT:** `github.com/golang-jwt/jwt/v5`
+- **Password hashing:** `golang.org/x/crypto/bcrypt` (cost ≥ 12)
+- **Key encryption:** AES-256-GCM via standard library `crypto/aes`
 - **Database:** Postgres — `cambium` schema (users, refresh_tokens); Rhizome tables in `rhizome` schema on the same instance
 - **Internal Rhizome interface:** HTTP initially, gRPC when streaming is needed
 
@@ -40,9 +40,9 @@ No virtual environment needed — Go resolves dependencies from `go.mod`/`go.sum
 
 ## Current status
 
-- **Phase 0** ✓ — Postgres running in Docker, Rhizome migrated to Postgres, 310 tests passing
-- **Phase 1** in progress — Go skeleton, `/health`, Postgres connection, `cambium` schema migrations
-- **Phase 2** pending — auth endpoints, JWT middleware, AES-256-GCM key management
+- **Phase 0** ✓ — Postgres 16 in Docker (`rhizome-pg`, port 5432), Rhizome migrated, 325 tests passing
+- **Phase 1** ✓ — Go module, `/health`, pgxpool connection, cambium schema migrations
+- **Phase 2** in progress (`lenticel` branch) — auth endpoints, JWT middleware, AES-256-GCM key management
 - **Phase 3** pending — Rhizome proxy, provider key injection
 - **Phase 4** pending — full API surface
 
@@ -51,18 +51,36 @@ No virtual environment needed — Go resolves dependencies from `go.mod`/`go.sum
 ```
 cmd/
   server/
-    main.go           — entry point: wires DB, runs migrations, starts HTTP server
+    main.go              — entry point: wires DB, runs migrations, starts HTTP server
 internal/
   api/
-    routes.go         — route registration
-    health.go         — GET /health handler
-  auth/               — JWT, bcrypt, AES-256-GCM (Phase 2)
+    routes.go            — route registration
+    health.go            — GET /health
+    middleware.go        — JWT auth middleware (wraps /api/v1 routes)
+    context.go           — request context helpers (user_id extraction)
+    auth.go              — register, login, refresh, session, logout handlers
+    keys.go              — PUT/GET/DELETE /api/v1/auth/keys handlers
+  auth/
+    jwt.go               — issue + verify HS256 tokens (15-min access, 7-day refresh)
+    password.go          — bcrypt hash (cost 12) + verify
+    crypto.go            — AES-256-GCM encrypt/decrypt for provider keys
   db/
-    db.go             — pgxpool connection
-    migrations.go     — CREATE TABLE IF NOT EXISTS for cambium schema
-  rhizome/            — HTTP client for Rhizome internal API (Phase 3)
+    db.go                — pgxpool connection from DATABASE_URL
+    migrations.go        — idempotent cambium schema + users + refresh_tokens
+    users.go             — user queries: insert, get by email, get by id, update keys
+    tokens.go            — refresh token queries: insert, get by hash, revoke
+  rhizome/               — HTTP client for Rhizome internal API (Phase 3)
 docs/
-  design.md           — full architecture and design decisions
+  design.md              — full architecture and design decisions
+```
+
+## Environment variables
+
+```
+DATABASE_URL            — postgres connection string (required)
+JWT_SECRET              — HS256 signing secret, min 32 bytes (required)
+CAMBIUM_ENCRYPTION_KEY  — 32-byte AES-256-GCM master key for provider keys (required)
+PORT                    — HTTP listen port (default: 8080)
 ```
 
 ## Database design
@@ -262,21 +280,17 @@ GET  /api/v1/media/{id}
 - Rhizome migrated to Postgres — `DATABASE_URL` env var, `PostgresSaver` checkpointer
 - All 310 Rhizome tests passing
 
-**Phase 1 — Project skeleton** ✓ done
-- `go mod init github.com/ybordag/cambium`
-- Directory structure: `cmd/server/`, `internal/api/`, `internal/auth/`, `internal/db/`, `internal/rhizome/`
+**Phase 1 — Project skeleton** ✓ done (main, commit 0f06cc8)
+- `go mod init github.com/ybordag/cambium` (Go 1.25, pgx/v5)
 - `GET /health` returns `{"status":"ok"}`
-- Postgres connection via `pgxpool` (`pgx/v5`)
-- `cambium` schema migrations run at startup: `users` and `refresh_tokens` tables
+- pgxpool Postgres connection, cambium schema migrations at startup
 
-**Phase 2 — Auth endpoints**
-- `POST /auth/register`: bcrypt hash, insert user, issue tokens
-- `POST /auth/login`: bcrypt verify, issue tokens
-- `POST /auth/refresh`: rotate refresh token
-- JWT middleware as a handler wrapper
-- Key management endpoints: `PUT/GET/DELETE /api/v1/auth/keys` with AES-256-GCM encryption
-- Tests for the full register → login → refresh → protected route flow
-- Tests for key set/get/delete
+**Phase 2 — Auth endpoints + key management** (lenticel branch)
+- `internal/auth/`: jwt.go, password.go, crypto.go
+- `internal/db/`: users.go, tokens.go
+- `internal/api/`: middleware.go, context.go, auth.go, keys.go
+- Endpoints: register, login, refresh, session, logout, PUT/GET/DELETE /api/v1/auth/keys
+- Tests: register→login→refresh→logout flow, wrong password, expired token, key lifecycle
 
 **Phase 3 — Rhizome proxy**
 - HTTP client that calls Rhizome's internal FastAPI
