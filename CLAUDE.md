@@ -78,10 +78,11 @@ docs/
 ## Environment variables
 
 ```
-DATABASE_URL            — postgres connection string (required)
-JWT_SECRET              — HS256 signing secret, min 32 bytes (required)
-CAMBIUM_ENCRYPTION_KEY  — 32-byte AES-256-GCM master key for provider keys (required)
-PORT                    — HTTP listen port (default: 8080)
+DATABASE_URL             — Postgres connection string (required)
+JWT_SECRET               — HS256 signing secret, min 32 bytes (required)
+CAMBIUM_ENCRYPTION_KEY   — 32-byte AES-256-GCM master key for provider keys (required)
+RHIZOME_INTERNAL_URL     — Rhizome internal API base URL (default: http://localhost:8001)
+PORT                     — HTTP listen port (default: 8080)
 ```
 
 ## Database design
