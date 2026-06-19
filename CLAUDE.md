@@ -52,12 +52,16 @@ Annotations live in the handler files alongside the code they describe. The `int
 
 ## Current status
 
-- **Phase 0** ✓ — Postgres 16 in Docker (`rhizome-pg`, port 5432), Rhizome migrated, 408 tests passing
+- **Phase 0** ✓ — Postgres 16 in Docker (`rhizome-pg`, port 5432), Rhizome migrated
 - **Phase 1** ✓ — Go module, `/health`, pgxpool connection, cambium schema migrations (main, commit 0f06cc8)
 - **Phase 2** ✓ — auth endpoints, JWT middleware, AES-256-GCM key management (lenticel → main, commit 5ee7575)
 - **Phase 3** ✓ — Rhizome HTTP client, SSE streaming proxy, provider key injection, partial route wiring (phloem → main, commit 1d3bc74)
 - **Phase 4** ✓ — full route wiring, AI-trigger endpoints, media stubs, full docs (periderm → main, commit 6a916a6)
-- **Phase 5** in progress (`fibril` branch) — thread management: botanical name generator, POST/GET/DELETE /api/v1/threads
+- **Phase 5** ✓ — thread management: botanical name generator, POST/GET/DELETE /api/v1/threads (fibril → main)
+- **Frontend API pass** ✓ — ~115 routes total; new endpoints wired for tasks CRUD, task series,
+  task dependencies, bulk task updates, garden detail (beds/{id}, containers/{id}, plants/{id}),
+  POST /garden/beds, available filter on beds/containers, project beds/containers/expenses/shopping,
+  calendar annotations, shopping list, activity stats. Security sweep covers all ~115 routes.
 
 ## Project layout
 

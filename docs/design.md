@@ -292,59 +292,45 @@ For the current architecture (browser → Cambium → Rhizome), SSE is correct.
 
 ## Build order
 
-### Phase 0 — Postgres setup (in progress)
+### Phase 0 — Postgres setup ✓ complete
 
-- ~~Migrate Rhizome: update `db/database.py` to read `DATABASE_URL`, swap `SqliteSaver` → `langgraph-checkpoint-postgres`~~ **done** (geranium commit 6a3c672)
-- Stand up Postgres: `docker run --name rhizome-pg -e POSTGRES_PASSWORD=dev -p 5432:5432 -d postgres`
-- Create schemas: `CREATE SCHEMA cambium; CREATE SCHEMA rhizome;`
-- Set `DATABASE_URL` in Rhizome `.env`, run `init_db()` to create `rhizome` schema tables
-- Verify Rhizome tests still pass (test suite uses in-memory SQLite, unaffected)
+Postgres 16 running in Docker. `cambium` and `rhizome` schemas created. Rhizome migrated to Postgres.
 
-### Phase 1 — Go project skeleton
+### Phase 1 — Go project skeleton ✓ complete
 
-- `go mod init github.com/ybordag/cambium`
-- Directory structure:
-  ```
-  cmd/server/       — main.go, entry point
-  internal/auth/    — JWT, bcrypt, AES key encryption
-  internal/api/     — HTTP handlers, route registration
-  internal/rhizome/ — HTTP client that calls Rhizome internal API
-  internal/db/      — Postgres connection, user/token queries
-  ```
-- Basic `net/http` server returning 200 on `/health`
-- Postgres connection (pgx or database/sql + lib/pq)
-- `cambium` schema migrations (users + refresh_tokens)
+Go module, `/health`, pgxpool, `cambium` schema migrations. (commit 0f06cc8)
 
-### Phase 2 — Auth + key management
+### Phase 2 — Auth + key management ✓ complete
 
-- Register, login, refresh, session endpoints
-- JWT middleware (handler wrapper, not inline)
-- Key management: PUT/GET/DELETE `/api/v1/auth/keys` with AES-256-GCM
-- Tests: full register → login → refresh → protected route flow
-- Tests: set key, verify configured, delete key, verify unconfigured
+Register, login, refresh, session, logout. JWT middleware. AES-256-GCM key management. (commit 5ee7575)
 
-### Phase 3 — Rhizome proxy
+### Phase 3 — Rhizome proxy ✓ complete
 
-- HTTP client for Rhizome internal FastAPI
-- Middleware pipeline: JWT verify → decrypt provider key → build Rhizome request
-- Stub proxy endpoints (`/api/v1/triage/latest`, `/api/v1/tasks/daily`)
-- End-to-end: login → set key → call protected route → Rhizome uses user's key
+HTTP client (`DataGet`, `DataPost`, `RunAgent`, `StreamAgent`). SSE streaming proxy. Provider key injection. (commit 1d3bc74)
 
-### Phase 4 — Full API surface
+### Phase 4 — Full API surface ✓ complete
 
-- All endpoints from the planned surface in CLAUDE.md
-- Media upload stubs (full implementation waits for Epic 2)
-- API contract tests
+~95 routes wired. AI-trigger handlers (triage, weather, treatment plans, task generation). Media stubs. Full Swagger docs. (commit 6a916a6)
+
+### Phase 5 — Thread management ✓ complete
+
+Botanical name generator (31×41×36 ≈ 45,700 combinations). `POST/GET/DELETE/GET-messages /api/v1/threads`. (fibril → main)
+
+### Frontend API pass ✓ complete
+
+~115 routes total. All new Rhizome endpoints wired: task CRUD, task series, task dependencies, bulk task update, garden detail endpoints, available resource filters, project beds/containers/expenses/shopping, calendar annotations, shopping list, activity stats. `TestAllProtectedRoutesReject401` security sweep expanded to cover all routes.
 
 ---
 
 ## Open questions
 
-1. **Rate limiting** — auth endpoints need brute-force protection. `golang.org/x/time/rate` or a middleware library. Decide before Phase 2 ships.
+1. **Rate limiting** — auth endpoints need brute-force protection before any public exposure. `golang.org/x/time/rate` or a middleware library.
 
-2. **`CAMBIUM_ENCRYPTION_KEY` rotation** — design the re-encryption script before going to production. See Key rotation section above.
+2. **`CAMBIUM_ENCRYPTION_KEY` rotation** — design the re-encryption script before going to production with real user keys.
 
-3. **gRPC migration trigger** — switch when Verdant needs token streaming. No action needed now.
+3. **gRPC migration trigger** — SSE over HTTP is correct for the current browser → Cambium → Rhizome path. Switch if Fairlead needs service-to-service streaming.
+
+4. **Notification SSE event bus** — `GET /api/v1/notifications/stream` requires a shared event bus so background jobs on any pod can reach the SSE connection on any pod. Decision: Postgres `LISTEN/NOTIFY` (zero new infrastructure; psycopg3 async iterator). Per-user in-memory queues won't work across the two k3s pods.
 
 ---
 
