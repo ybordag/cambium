@@ -23,8 +23,8 @@ spec:
     spec:
       containers:
       - name: cambium
-        image: ghcr.io/ybordag/cambium:latest
-        imagePullPolicy: Always
+        image: docker.io/library/cambium:latest
+        imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8080
 
