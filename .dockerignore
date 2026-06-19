@@ -1,4 +1,6 @@
 .env
 .git
 *.md
-docs/
+docs/getting-started/
+docs/architecture/
+docs/roadmap/
