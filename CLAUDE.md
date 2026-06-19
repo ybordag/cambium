@@ -10,7 +10,7 @@ It sits between the Verdant frontend and the Rhizome domain engine, handling:
 - Request routing to Rhizome over an internal HTTP interface
 - Stable versioned JSON DTOs for the frontend
 
-See `design.md` for the full architecture and design decisions.
+See `docs/design.md` for the full architecture and design decisions.
 
 ## Related repos
 
@@ -20,11 +20,12 @@ See `design.md` for the full architecture and design decisions.
 
 ## Tech stack
 
-- **Language:** Go (1.21+)
-- **Routing:** standard library `net/http` or `gin`
-- **JWT:** `github.com/golang-jwt/jwt/v5`
-- **Password hashing:** `golang.org/x/crypto/bcrypt`
-- **Key encryption:** AES-256-GCM via standard library `crypto/aes`
+- **Language:** Go 1.24
+- **Routing:** standard library `net/http` (Go 1.22+ enhanced ServeMux with method+path patterns)
+- **Database driver:** `github.com/jackc/pgx/v5` (connection pooling via `pgxpool`)
+- **JWT:** `github.com/golang-jwt/jwt/v5` (Phase 2)
+- **Password hashing:** `golang.org/x/crypto/bcrypt` (Phase 2)
+- **Key encryption:** AES-256-GCM via standard library `crypto/aes` (Phase 2)
 - **Database:** Postgres — `cambium` schema (users, refresh_tokens); Rhizome tables in `rhizome` schema on the same instance
 - **Internal Rhizome interface:** HTTP initially, gRPC when streaming is needed
 
@@ -35,8 +36,34 @@ go build ./...
 go test ./...
 ```
 
-**Phase 0 in progress** — Rhizome has been updated to read `DATABASE_URL` and select its
-checkpointer based on environment. Postgres setup is the next step before any Go code is written.
+No virtual environment needed — Go resolves dependencies from `go.mod`/`go.sum` automatically.
+
+## Current status
+
+- **Phase 0** ✓ — Postgres running in Docker, Rhizome migrated to Postgres, 310 tests passing
+- **Phase 1** in progress — Go skeleton, `/health`, Postgres connection, `cambium` schema migrations
+- **Phase 2** pending — auth endpoints, JWT middleware, AES-256-GCM key management
+- **Phase 3** pending — Rhizome proxy, provider key injection
+- **Phase 4** pending — full API surface
+
+## Project layout
+
+```
+cmd/
+  server/
+    main.go           — entry point: wires DB, runs migrations, starts HTTP server
+internal/
+  api/
+    routes.go         — route registration
+    health.go         — GET /health handler
+  auth/               — JWT, bcrypt, AES-256-GCM (Phase 2)
+  db/
+    db.go             — pgxpool connection
+    migrations.go     — CREATE TABLE IF NOT EXISTS for cambium schema
+  rhizome/            — HTTP client for Rhizome internal API (Phase 3)
+docs/
+  design.md           — full architecture and design decisions
+```
 
 ## Database design
 
@@ -229,18 +256,18 @@ GET  /api/v1/media/{id}
 
 ## Recommended build order
 
-**Phase 0 — Postgres setup**
-- Stand up Postgres locally (Docker: `docker run -e POSTGRES_PASSWORD=... -p 5432:5432 postgres`)
-- Create `cambium` and `rhizome` schemas
-- Migrate Rhizome from SQLite to Postgres (`DATABASE_URL` env var, swap SqliteSaver checkpointer)
-- Verify Rhizome tests still pass (tests use in-memory SQLite, no change needed)
+**Phase 0 — Postgres setup** ✓ done
+- Postgres 16 running in Docker (`rhizome-pg`, port 5432, named volume `rhizome_pgdata`)
+- `cambium` and `rhizome` schemas created
+- Rhizome migrated to Postgres — `DATABASE_URL` env var, `PostgresSaver` checkpointer
+- All 310 Rhizome tests passing
 
-**Phase 1 — Project skeleton**
+**Phase 1 — Project skeleton** ✓ done
 - `go mod init github.com/ybordag/cambium`
-- Directory structure: `cmd/server/`, `internal/auth/`, `internal/api/`, `internal/rhizome/`, `internal/db/`
-- Basic `net/http` server returning 200 on `/health`
-- Postgres connection via `pgx` or `database/sql` + `lib/pq`
-- `cambium` schema migrations: `users` and `refresh_tokens` tables
+- Directory structure: `cmd/server/`, `internal/api/`, `internal/auth/`, `internal/db/`, `internal/rhizome/`
+- `GET /health` returns `{"status":"ok"}`
+- Postgres connection via `pgxpool` (`pgx/v5`)
+- `cambium` schema migrations run at startup: `users` and `refresh_tokens` tables
 
 **Phase 2 — Auth endpoints**
 - `POST /auth/register`: bcrypt hash, insert user, issue tokens
