@@ -1,0 +1,102 @@
+# Cambium — Deployment + Service + Ingress
+#
+# Apply: kubectl apply -f k8s/cambium.yaml
+# Requires: rhizome-secrets and cambium-secrets to exist in the cluster.
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cambium
+  namespace: default
+  labels:
+    app: cambium
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: cambium
+  template:
+    metadata:
+      labels:
+        app: cambium
+    spec:
+      containers:
+      - name: cambium
+        image: docker.io/library/cambium:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8080
+
+        envFrom:
+        - secretRef:
+            name: cambium-secrets
+
+        env:
+        - name: PORT
+          value: "8080"
+
+        # Liveness: restart if Go server stops responding
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          failureThreshold: 3
+
+        # Readiness: hold traffic during startup and DB migration
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          failureThreshold: 3
+
+        resources:
+          requests:
+            memory: "128Mi"   # Go binary is very lightweight
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "1"
+
+---
+# ClusterIP Service — other pods call Cambium via http://cambium-svc:8080
+apiVersion: v1
+kind: Service
+metadata:
+  name: cambium-svc
+  namespace: default
+spec:
+  selector:
+    app: cambium
+  ports:
+  - port: 8080
+    targetPort: 8080
+  type: ClusterIP
+
+---
+# Ingress — routes external HTTP traffic to Cambium.
+# k3s ships with Traefik as the default ingress controller.
+# Access via: http://thor (or the node's IP if no DNS is configured).
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: cambium-ingress
+  namespace: default
+  annotations:
+    # Route all HTTP traffic (port 80) to Cambium
+    traefik.ingress.kubernetes.io/router.entrypoints: web
+spec:
+  rules:
+  - http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: cambium-svc
+            port:
+              number: 8080

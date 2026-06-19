@@ -13,6 +13,19 @@ type keysHandler struct {
 	pool *pgxpool.Pool
 }
 
+// set stores or updates an encrypted provider API key.
+// Keys are encrypted with AES-256-GCM and never returned to the client.
+//
+//	@Summary	Set provider key
+//	@Tags		keys
+//	@Accept		json
+//	@Produce	json
+//	@Security	BearerAuth
+//	@Param		body	body		SetKeyRequest	true	"Provider and API key"
+//	@Success	200		{object}	map[string]string
+//	@Failure	400		{object}	ErrorResponse	"Invalid provider — must be gemini, openai, or anthropic"
+//	@Failure	401		{object}	ErrorResponse
+//	@Router		/api/v1/auth/keys [put]
 func (h *keysHandler) set(w http.ResponseWriter, r *http.Request) {
 	userID, ok := UserIDFromContext(r.Context())
 	if !ok {
@@ -43,6 +56,15 @@ func (h *keysHandler) set(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]string{"status": "key stored"})
 }
 
+// list returns which providers have a key configured (booleans only — never actual key values).
+//
+//	@Summary	List configured providers
+//	@Tags		keys
+//	@Produce	json
+//	@Security	BearerAuth
+//	@Success	200	{object}	KeysResponse
+//	@Failure	401	{object}	ErrorResponse
+//	@Router		/api/v1/auth/keys [get]
 func (h *keysHandler) list(w http.ResponseWriter, r *http.Request) {
 	userID, ok := UserIDFromContext(r.Context())
 	if !ok {
@@ -63,6 +85,17 @@ func (h *keysHandler) list(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// delete removes a stored provider key.
+//
+//	@Summary	Delete provider key
+//	@Tags		keys
+//	@Produce	json
+//	@Security	BearerAuth
+//	@Param		provider	path		string			true	"Provider name"	Enums(gemini, openai, anthropic)
+//	@Success	200			{object}	KeyDeletedResponse
+//	@Failure	400			{object}	ErrorResponse
+//	@Failure	401			{object}	ErrorResponse
+//	@Router		/api/v1/auth/keys/{provider} [delete]
 func (h *keysHandler) delete(w http.ResponseWriter, r *http.Request) {
 	userID, ok := UserIDFromContext(r.Context())
 	if !ok {

@@ -2,7 +2,7 @@
 
 ## Current status
 
-All four implementation phases are complete. Cambium is fully wired as an API gateway.
+Phases 0–4 are complete. Phase 5 (thread management) is in progress on the `fibril` branch.
 
 | Phase | Status | What it delivered |
 |---|---|---|
@@ -10,7 +10,8 @@ All four implementation phases are complete. Cambium is fully wired as an API ga
 | Phase 1 — Go skeleton | ✓ done | `go mod init`, `/health`, pgxpool, `cambium` schema migrations |
 | Phase 2 — Auth + key management | ✓ done | Register/login/refresh/logout, JWT middleware, AES-256-GCM provider key storage |
 | Phase 3 — Rhizome proxy | ✓ done | Rhizome HTTP client, SSE streaming, provider key injection, partial route wiring |
-| Phase 4 — Full API surface | ✓ done | All ~95 endpoints wired; AI-trigger handlers; media stubs |
+| Phase 4 — Full API surface | ✓ done | All ~95 endpoints wired; AI-trigger handlers; media stubs; comprehensive docs |
+| Phase 5 — Thread management | **in progress** (`fibril`) | Botanical name generator; `POST/GET/DELETE /api/v1/threads`; full conversation history |
 
 ---
 

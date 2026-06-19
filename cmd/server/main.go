@@ -1,3 +1,19 @@
+// Package main is the Cambium API gateway entry point.
+//
+//	@title			Cambium — Gardening Agent API
+//	@version		1.0
+//	@description	HTTP API gateway for the Gardening Agent system. Sits between Verdant (React frontend) and Rhizome (Python LangGraph agent). Handles authentication, encrypted provider key storage, and request routing.
+//	@contact.name	Gardening Agent
+//	@license.name	Apache 2.0
+//
+//	@host		localhost:8080
+//	@BasePath	/
+//	@schemes	http https
+//
+//	@securityDefinitions.apikey	BearerAuth
+//	@in							header
+//	@name						Authorization
+//	@description				JWT access token — format: "Bearer <token>"
 package main
 
 import (
@@ -7,6 +23,7 @@ import (
 	"net/http"
 	"os"
 
+	_ "github.com/ybordag/cambium/docs" // generated swagger docs
 	"github.com/ybordag/cambium/internal/api"
 	"github.com/ybordag/cambium/internal/db"
 )

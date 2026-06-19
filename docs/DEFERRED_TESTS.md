@@ -53,3 +53,22 @@ Tests consciously deferred with rationale and re-enable criteria.
 **What:** Store an encrypted key via `PUT /api/v1/auth/keys`, then verify the raw value in the DB is not the plaintext and can be decrypted back to the original.
 **Why deferred:** Requires reaching into the DB in a test — slightly invasive. The crypto unit tests prove the encryption is correct; the handler tests prove the key is stored.
 **Re-enable when:** Adding a Cambium security audit test suite.
+
+---
+
+## Proxy and E2E tests
+
+### Proxy route response validation (authenticated)
+**What:** For each data proxy route (e.g. `GET /api/v1/tasks/daily`, `GET /api/v1/garden/plants`), verify that an authenticated request with a running Rhizome returns a meaningful response body rather than a 502.
+**Why deferred:** Requires Rhizome to be running at `RHIZOME_INTERNAL_URL`. The security sweep in `security_test.go` covers 401 rejection; the proxy mechanics are covered by `internal/rhizome/client_test.go` using a fake Rhizome server. The combination is sufficient for unit/integration testing.
+**Re-enable when:** E2E test suite is set up (both services running). Use `pytest` + `requests` against live Cambium and verify side effects in Postgres directly.
+
+### AI trigger endpoint responses
+**What:** `POST /api/v1/triage/run`, `/weather/tasks/draft`, `/incidents/{id}/treatment`, `/projects/{id}/tasks/generate` — verify that an authenticated request with a valid thread_id and a running Rhizome returns an agent response.
+**Why deferred:** These route to the LangGraph agent, which requires a live LLM API key and a running Rhizome. Testing the agent response content is outside the scope of Cambium unit tests.
+**Re-enable when:** E2E test suite is set up. These are good candidates for smoke tests that run in CI against a staging environment.
+
+### 502 handling under Rhizome failure
+**What:** When Rhizome is unreachable, authenticated proxy requests should return 502 with a structured error body, not panic or hang.
+**Why deferred:** Covered structurally by `TestRunAgent_RhizomeError` in `client_test.go` (client returns error on non-200). The handler wraps the error into `writeError(w, 502, ...)`. A targeted test would spin up a fake Rhizome that returns 503.
+**Re-enable when:** Adding integration tests with a configurable fake Rhizome server.

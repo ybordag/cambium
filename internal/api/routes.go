@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	httpSwagger "github.com/swaggo/http-swagger"
 )
 
 // NewRouter wires all routes and returns the root handler.
@@ -12,6 +13,7 @@ func NewRouter(pool *pgxpool.Pool) http.Handler {
 	ph := newProxyHandler(pool)
 	ah := &authHandler{pool: pool}
 	kh := &keysHandler{pool: pool}
+	th := &threadHandler{pool: pool, rhizome: ph.rhizome}
 
 	// -------------------------------------------------------------------------
 	// Public
@@ -201,6 +203,16 @@ func NewRouter(pool *pgxpool.Pool) http.Handler {
 	mux.Handle("POST /api/v1/tasks/series/run", RequireAuth(http.HandlerFunc(ph.proxyData("tasks/series/run"))))
 
 	// -------------------------------------------------------------------------
+	// Threads — conversation management
+	// -------------------------------------------------------------------------
+
+	mux.Handle("POST /api/v1/threads", RequireAuth(http.HandlerFunc(th.createThread)))
+	mux.Handle("GET /api/v1/threads", RequireAuth(http.HandlerFunc(ph.proxyData("threads"))))
+	mux.Handle("GET /api/v1/threads/{id}/messages", RequireAuth(ph.proxyDataWithPathParam("threads", "id")))
+	mux.Handle("GET /api/v1/threads/{id}", RequireAuth(ph.proxyDataWithPathParam("threads", "id")))
+	mux.Handle("DELETE /api/v1/threads/{id}", RequireAuth(ph.proxyDataWithPathParam("threads", "id")))
+
+	// -------------------------------------------------------------------------
 	// Activity
 	// -------------------------------------------------------------------------
 
@@ -212,6 +224,12 @@ func NewRouter(pool *pgxpool.Pool) http.Handler {
 
 	mux.Handle("POST /api/v1/media", RequireAuth(http.HandlerFunc(notImplemented)))
 	mux.Handle("GET /api/v1/media/{id}", RequireAuth(http.HandlerFunc(notImplemented)))
+
+	// -------------------------------------------------------------------------
+	// Swagger UI — /docs/
+	// -------------------------------------------------------------------------
+
+	mux.Handle("GET /docs/", httpSwagger.WrapHandler)
 
 	return mux
 }

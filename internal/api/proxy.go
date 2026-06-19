@@ -63,6 +63,21 @@ func (h *proxyHandler) providerKey(r *http.Request, userID string) (provider, de
 // Chat — agent proxy
 // -------------------------------------------------------------------------
 
+// chat sends a message to the Rhizome LangGraph agent and returns the complete response.
+// Decrypts the user's preferred provider key before forwarding to Rhizome.
+//
+//	@Summary	Chat (non-streaming)
+//	@Tags		chat
+//	@Accept		json
+//	@Produce	json
+//	@Security	BearerAuth
+//	@Param		thread_id	query		string		true	"Thread ID (from POST /api/v1/threads)"
+//	@Param		body		body		ChatRequest	true	"User message"
+//	@Success	200			{object}	ChatResponse
+//	@Failure	400			{object}	ErrorResponse
+//	@Failure	401			{object}	ErrorResponse
+//	@Failure	502			{object}	ErrorResponse	"Rhizome unavailable"
+//	@Router		/api/v1/chat [post]
 func (h *proxyHandler) chat(w http.ResponseWriter, r *http.Request) {
 	userID, _ := UserIDFromContext(r.Context())
 	threadID := r.URL.Query().Get("thread_id")
@@ -95,6 +110,22 @@ func (h *proxyHandler) chat(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, resp)
 }
 
+// chatStream streams LLM tokens via Server-Sent Events as they are produced.
+// Event format: data: {"type":"token","content":"..."} — data: {"type":"done"}
+// If the agent pauses for confirmation: data: {"type":"interaction","payload":{...}}
+//
+//	@Summary	Chat (SSE streaming)
+//	@Tags		chat
+//	@Accept		json
+//	@Produce	text/event-stream
+//	@Security	BearerAuth
+//	@Param		thread_id	query		string		true	"Thread ID (from POST /api/v1/threads)"
+//	@Param		body		body		ChatRequest	true	"User message"
+//	@Success	200			{string}	string		"SSE stream of typed events"
+//	@Failure	400			{object}	ErrorResponse
+//	@Failure	401			{object}	ErrorResponse
+//	@Failure	502			{object}	ErrorResponse
+//	@Router		/api/v1/chat/stream [post]
 func (h *proxyHandler) chatStream(w http.ResponseWriter, r *http.Request) {
 	userID, _ := UserIDFromContext(r.Context())
 	threadID := r.URL.Query().Get("thread_id")
@@ -128,6 +159,19 @@ func (h *proxyHandler) chatStream(w http.ResponseWriter, r *http.Request) {
 	proxySSE(w, stream)
 }
 
+// chatResume resumes a paused interaction (non-streaming).
+//
+//	@Summary	Resume interaction (non-streaming)
+//	@Tags		chat
+//	@Accept		json
+//	@Produce	json
+//	@Security	BearerAuth
+//	@Param		body	body		ResumeRequestBody	true	"Thread ID and resolution value"
+//	@Success	200		{object}	ChatResponse
+//	@Failure	400		{object}	ErrorResponse
+//	@Failure	401		{object}	ErrorResponse
+//	@Failure	502		{object}	ErrorResponse
+//	@Router		/api/v1/chat/resume [post]
 func (h *proxyHandler) chatResume(w http.ResponseWriter, r *http.Request) {
 	userID, _ := UserIDFromContext(r.Context())
 	var body struct {
@@ -150,6 +194,19 @@ func (h *proxyHandler) chatResume(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, resp)
 }
 
+// chatResumeStream resumes a paused interaction with SSE streaming.
+//
+//	@Summary	Resume interaction (SSE streaming)
+//	@Tags		chat
+//	@Accept		json
+//	@Produce	text/event-stream
+//	@Security	BearerAuth
+//	@Param		body	body		ResumeRequestBody	true	"Thread ID and resolution value"
+//	@Success	200		{string}	string				"SSE stream of typed events"
+//	@Failure	400		{object}	ErrorResponse
+//	@Failure	401		{object}	ErrorResponse
+//	@Failure	502		{object}	ErrorResponse
+//	@Router		/api/v1/chat/resume/stream [post]
 func (h *proxyHandler) chatResumeStream(w http.ResponseWriter, r *http.Request) {
 	userID, _ := UserIDFromContext(r.Context())
 	var body struct {
