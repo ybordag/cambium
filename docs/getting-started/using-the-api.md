@@ -59,9 +59,36 @@ Supported providers: `gemini`, `openai`, `anthropic`.
 
 ---
 
-## 4. Chat with the agent
+## 4. Start a conversation thread
 
-Every chat request requires a `thread_id`. Generate one yourself (a UUID or any stable string) and reuse it to continue a conversation.
+Before chatting, create a thread. Cambium generates a memorable botanical name for you:
+
+```bash
+curl -X POST http://localhost:8080/api/v1/threads \
+  -H "Authorization: Bearer <access_token>"
+# → {"thread_id": "silver-fern-cascade"}
+```
+
+Thread IDs are three-word botanical names (`silver-fern-cascade`, `ancient-lotus-dawn`).
+Reuse the same `thread_id` to continue a conversation across multiple requests.
+
+List your past conversations:
+
+```bash
+curl http://localhost:8080/api/v1/threads \
+  -H "Authorization: Bearer <access_token>"
+```
+
+Get the full message history for a thread:
+
+```bash
+curl http://localhost:8080/api/v1/threads/silver-fern-cascade/messages \
+  -H "Authorization: Bearer <access_token>"
+```
+
+## 6. Chat with the agent
+
+Every chat request requires the `thread_id` from step 4.
 
 **Non-streaming (wait for complete response):**
 
@@ -107,7 +134,7 @@ curl -X POST "http://localhost:8080/api/v1/chat/resume?thread_id=my-thread-1" \
 
 ---
 
-## 5. Read garden data
+## 7. Read garden data
 
 Once the agent has populated your garden (via chat), all domain data is available directly:
 
@@ -131,7 +158,7 @@ curl "http://localhost:8080/api/v1/projects/<project-id>/progress" \
 
 ---
 
-## 6. Trigger AI operations
+## 8. Trigger AI operations
 
 Some operations require the agent to reason (rather than just read data). These use a dedicated trigger endpoint and require a `thread_id`:
 
@@ -157,7 +184,7 @@ curl -X POST http://localhost:8080/api/v1/incidents/<incident-id>/treatment \
 
 ---
 
-## 7. Refresh tokens
+## 9. Refresh tokens
 
 Access tokens expire after 15 minutes. Use the refresh cookie to get a new one:
 
@@ -170,7 +197,7 @@ The old refresh token is immediately revoked and a new one is issued (rotation o
 
 ---
 
-## Token storage
+## 10. Token storage
 
 - **Access token** — store in `localStorage` or memory. Short-lived (15 min). Send as `Authorization: Bearer <token>`.
 - **Refresh token** — stored as an `httpOnly` cookie by the browser automatically. Never accessible to JavaScript.
