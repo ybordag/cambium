@@ -284,13 +284,14 @@ GET    /api/v1/garden/containers/{id}/care/state       data
 GET    /api/v1/garden/containers/{id}/care/history     data
 GET    /api/v1/garden/containers/{id}/activity         data
 
-GET    /api/v1/garden/plants                           data
-POST   /api/v1/garden/plants                           data
-PATCH  /api/v1/garden/plants/{id}                      data
-DELETE /api/v1/garden/plants/{id}                      data
-POST   /api/v1/garden/plants/batch                     data
-PATCH  /api/v1/garden/plants/batch                     data
-PATCH  /api/v1/garden/plants/batch/remove              data
+GET    /api/v1/garden/plants                                   data
+POST   /api/v1/garden/plants                                   data
+PATCH  /api/v1/garden/plants/{id}                              data
+PATCH  /api/v1/garden/plants/{id}/remove                       data — soft delete (died/harvested, keeps record)
+DELETE /api/v1/garden/plants/{id}                              data — hard delete (data entry mistake only)
+POST   /api/v1/garden/plants/batch                             data
+PATCH  /api/v1/garden/plants/batch                             data
+PATCH  /api/v1/garden/plants/batch/remove                      data
 GET    /api/v1/garden/plants/{id}/care/state           data
 GET    /api/v1/garden/plants/{id}/care/history         data
 GET    /api/v1/garden/plants/{id}/activity             data
@@ -311,7 +312,6 @@ GET    /api/v1/projects/{id}                                   data
 PATCH  /api/v1/projects/{id}                                   data
 DELETE /api/v1/projects/{id}                                   data
 GET    /api/v1/projects/{id}/progress                          data
-GET    /api/v1/projects/{id}/activity                          data
 GET    /api/v1/projects/{id}/tasks                             data
 POST   /api/v1/projects/{id}/tasks/generate                    agent
 GET    /api/v1/projects/{id}/beds                              data
