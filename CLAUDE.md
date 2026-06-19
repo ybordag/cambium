@@ -38,6 +38,18 @@ go test ./...
 
 No virtual environment needed — Go resolves dependencies from `go.mod`/`go.sum` automatically.
 
+## Swagger UI
+
+Swagger UI is served at `GET /docs/index.html` when the server is running.
+The spec (`docs/swagger.json`, `docs/swagger.yaml`) is generated from handler annotations.
+
+**Regenerate after any handler change:**
+```bash
+~/go/bin/swag init -g cmd/server/main.go -o docs
+```
+
+Annotations live in the handler files alongside the code they describe. The `internal/api/swagger_types.go` file holds named request/response structs used only for schema generation. Always commit the regenerated `docs/` alongside code changes.
+
 ## Current status
 
 - **Phase 0** ✓ — Postgres 16 in Docker (`rhizome-pg`, port 5432), Rhizome migrated, 408 tests passing

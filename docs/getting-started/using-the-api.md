@@ -6,6 +6,53 @@ All examples use `curl`. Replace `localhost:8080` with your deployment URL.
 
 ---
 
+## Swagger UI — interactive API explorer
+
+Cambium ships with a built-in Swagger UI. Once the server is running, open:
+
+```
+http://localhost:8080/docs/index.html
+```
+
+### What is Swagger?
+
+**OpenAPI** (the standard, formerly known as Swagger) is a machine-readable specification that describes every endpoint in a REST API — its URL, HTTP method, parameters, request body shape, response codes, and authentication requirements. The spec lives in `docs/swagger.json` and `docs/swagger.yaml`.
+
+**Swagger UI** is an interactive website that renders the OpenAPI spec as a visual API explorer. You can:
+- Browse all endpoints grouped by tag (auth, chat, keys, threads, triage, etc.)
+- Read request body schemas and response shapes
+- Authenticate with your JWT token via the **Authorize** button
+- Execute real requests against the running server directly from the browser
+
+### Authenticating in Swagger UI
+
+1. Register or login via `POST /auth/register` or `POST /auth/login` in Swagger UI — copy the `access_token` from the response
+2. Click **Authorize** (top right of the page)
+3. Enter `Bearer <your_access_token>` in the `BearerAuth` field
+4. Click **Authorize** — all subsequent requests will include the token automatically
+
+### Rhizome also has Swagger
+
+Rhizome's internal FastAPI server exposes its own Swagger UI at:
+
+```
+http://localhost:8001/docs
+```
+
+FastAPI generates this automatically from Python type hints — no extra work needed. This shows the `/internal/agent` and `/internal/data/...` endpoints that Cambium calls. Useful during development to inspect what Cambium is proxying.
+
+### Keeping the spec up to date
+
+The spec is generated from annotations in the Go handler code. After changing any handler signature, adding an endpoint, or modifying a request/response type, regenerate it:
+
+```bash
+~/go/bin/swag init -g cmd/server/main.go -o docs
+```
+
+Commit the updated `docs/swagger.json` and `docs/swagger.yaml` alongside the code change. The spec is a first-class artifact — it should always reflect the live API.
+
+---
+
 ## 1. Register
 
 ```bash

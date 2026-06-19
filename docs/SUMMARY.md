@@ -2,7 +2,7 @@
 
 ## Getting Started
 - [Setup](getting-started/setup.md) — prerequisites, Postgres, env vars, running locally
-- [Using the API](getting-started/using-the-api.md) — auth, chat, CRUD, triggers
+- [Using the API](getting-started/using-the-api.md) — Swagger UI, auth, chat, CRUD, triggers
 
 ## Architecture
 - [Overview](architecture/overview.md) — system topology, components, DB ownership, provider key flow
