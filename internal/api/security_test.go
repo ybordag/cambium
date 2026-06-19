@@ -108,6 +108,32 @@ func TestAllProtectedRoutesReject401(t *testing.T) {
 		// Monitor
 		{"GET", "/api/v1/monitor/runs"},
 
+		// Calendar
+		{"GET", "/api/v1/calendar/annotations"},
+		{"POST", "/api/v1/calendar/annotations"},
+		{"PATCH", "/api/v1/calendar/annotations/some-id"},
+		{"DELETE", "/api/v1/calendar/annotations/some-id"},
+
+		// Shopping
+		{"GET", "/api/v1/shopping"},
+		{"POST", "/api/v1/shopping"},
+		{"PATCH", "/api/v1/shopping/some-id"},
+		{"DELETE", "/api/v1/shopping/some-id"},
+		{"POST", "/api/v1/shopping/some-id/purchase"},
+
+		// Tasks — series
+		{"POST", "/api/v1/tasks/series"},
+		{"DELETE", "/api/v1/tasks/series/some-id"},
+		{"POST", "/api/v1/tasks/some-id/dependencies"},
+		{"DELETE", "/api/v1/tasks/some-id/dependencies/some-blocking-id"},
+
+		// Projects — new sub-resources
+		{"PATCH", "/api/v1/projects/some-project-id/tasks/bulk"},
+		{"GET", "/api/v1/projects/some-project-id/expenses"},
+		{"POST", "/api/v1/projects/some-project-id/expenses"},
+		{"GET", "/api/v1/projects/some-project-id/expenses/summary"},
+		{"GET", "/api/v1/projects/some-project-id/shopping"},
+
 		// Activity
 		{"GET", "/api/v1/activity"},
 		{"GET", "/api/v1/activity/stats"},
