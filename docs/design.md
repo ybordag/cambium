@@ -118,6 +118,12 @@ Custom JWT — no third-party provider. Reasons:
 3. **Access token:** short-lived JWT (15 min), HS256, `user_id` in `sub` claim. Sent as `Authorization: Bearer <token>` header. Frontend stores in `localStorage`.
 4. **Refresh token:** long-lived (7–30 days), stored as a hash in `refresh_tokens`, sent as `httpOnly` cookie. Rotated on every use — on refresh, old token is revoked and a new one is issued atomically.
 
+### Account management endpoints
+
+`PATCH /auth/profile` (requires JWT) — update `preferred_provider` and/or `preferred_model` on the user record. At least one field required. Returns updated session object.
+
+`POST /auth/password` (requires JWT) — change password. Body: `{ current_password, new_password }`. Verifies current password via bcrypt before updating. Returns 401 on wrong current password (same generic error as login — prevents enumeration). New password hashed at bcrypt cost 12.
+
 ### HS256 now, RS256 later
 
 HS256 (shared secret) for the initial implementation. Migrate to RS256 (asymmetric)

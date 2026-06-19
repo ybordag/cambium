@@ -62,6 +62,9 @@ Annotations live in the handler files alongside the code they describe. The `int
   task dependencies, bulk task updates, garden detail (beds/{id}, containers/{id}, plants/{id}),
   POST /garden/beds, available filter on beds/containers, project beds/containers/expenses/shopping,
   calendar annotations, shopping list, activity stats. Security sweep covers all ~115 routes.
+- **Group B + account** ✓ — quick care recording (POST .../care) wired for plants/beds/containers;
+  incident PATCH/DELETE; manual treatment plan POST/PATCH/DELETE; PATCH /auth/profile and
+  POST /auth/password (Cambium-native handlers — no Rhizome proxy). 4 new functional auth tests.
 
 ## Project layout
 
