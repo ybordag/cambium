@@ -233,12 +233,60 @@ both live in Postgres. Cambium can route any request to any available Rhizome
 instance. No sticky sessions. See `rhizome/docs/architecture/deployment.md` for
 the full topology, scaling model, and future Temporal evolution.
 
-### Current: HTTP → Future: gRPC
+### Streaming: SSE over HTTP
 
-HTTP is correct for request/response flows. Migrate to gRPC when Verdant needs
-token streaming (streaming LLM responses). gRPC supports bidirectional streaming
-natively and is a drop-in for the internal interface without changing Cambium's
-public API surface.
+Token streaming uses **Server-Sent Events (SSE)** over HTTP — not gRPC. SSE is
+the right choice because:
+
+- Browsers consume SSE natively (`EventSource` / `fetch` with `ReadableStream`)
+- gRPC requires a proxy (Envoy + grpc-web) for browser clients — real operational overhead
+- SSE is plain HTTP with `Content-Type: text/event-stream`; no protocol change needed
+- OpenAI, Anthropic, and every major AI chat API use SSE for streaming
+
+Rhizome exposes two additional streaming endpoints alongside the standard ones:
+
+```
+POST /internal/agent/stream        — SSE stream of tokens for a new message
+POST /internal/agent/resume/stream — SSE stream of tokens after interaction resume
+```
+
+Each emits typed events:
+
+```
+data: {"type": "token",       "content": "The "}
+data: {"type": "token",       "content": "garden "}
+data: {"type": "interaction", "payload": {...}}   # when graph pauses for user input
+data: {"type": "done"}
+```
+
+Cambium proxies the SSE stream directly to Verdant with no buffering:
+
+```go
+// Forward Rhizome's SSE stream to the client
+w.Header().Set("Content-Type", "text/event-stream")
+w.Header().Set("Cache-Control", "no-cache")
+resp, _ := http.Post(rhizomeURL+"/internal/agent/stream", "application/json", body)
+defer resp.Body.Close()
+io.Copy(w, resp.Body)
+w.(http.Flusher).Flush()
+```
+
+Verdant reads the stream with `fetch` + `ReadableStream`:
+
+```javascript
+const resp = await fetch('/api/v1/chat/stream', { method: 'POST', body: ... })
+const reader = resp.body.getReader()
+while (true) {
+    const { done, value } = await reader.read()
+    if (done) break
+    const event = JSON.parse(new TextDecoder().decode(value).replace('data: ', ''))
+    if (event.type === 'token') appendToChat(event.content)
+}
+```
+
+**gRPC** remains the future path if Fairlead or other backend services need to
+call Rhizome with streaming — purely service-to-service, no browser in the chain.
+For the current architecture (browser → Cambium → Rhizome), SSE is correct.
 
 ---
 

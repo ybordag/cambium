@@ -174,10 +174,18 @@ It presents two surfaces — Cambium routes to the right one based on request ty
 ### Agent endpoint — AI operations
 
 For requests that require LangGraph reasoning (triage, interactions, care analysis,
-incident analysis, complex queries):
+incident analysis, complex queries). Two variants — streaming and non-streaming:
+
+```
+POST /internal/agent              — non-streaming (returns complete response)
+POST /internal/agent/stream       — SSE streaming (tokens arrive as produced)
+POST /internal/agent/resume       — resume paused interaction (non-streaming)
+POST /internal/agent/resume/stream — resume with SSE streaming
+```
+
+Request body (all four endpoints):
 
 ```json
-POST /internal/agent
 {
   "user_id": "abc-123",
   "thread_id": "thread-xyz",
@@ -187,6 +195,16 @@ POST /internal/agent
   "model": "gemini-1.5-flash"
 }
 ```
+
+SSE event format:
+
+```
+data: {"type": "token",       "content": "The garden "}
+data: {"type": "interaction", "payload": {...}}
+data: {"type": "done"}
+```
+
+Cambium proxies SSE streams directly to Verdant with `io.Copy` — no buffering.
 
 ### Data endpoint — direct reads and writes
 
@@ -234,53 +252,174 @@ GET    /api/v1/auth/keys
 DELETE /api/v1/auth/keys/{provider}
 ```
 
-Protected (require valid JWT):
+All `/api/v1` routes require a valid JWT. Routes marked **agent** go to Rhizome's
+`/internal/agent` (LangGraph + LLM). Routes marked **data** go to Rhizome's
+`/internal/data/...` (direct SQLAlchemy, no agent overhead).
+
+Chat:
 ```
-POST /api/v1/triage/run
-GET  /api/v1/triage/latest
-GET  /api/v1/interactions/pending
-GET  /api/v1/interactions/{id}
-POST /api/v1/interactions/{id}/resolve
-GET  /api/v1/tasks
-GET  /api/v1/tasks/due
-GET  /api/v1/tasks/daily
-GET  /api/v1/tasks/{id}
-POST /api/v1/tasks/{id}/start
-POST /api/v1/tasks/{id}/complete
-POST /api/v1/tasks/{id}/skip
-POST /api/v1/tasks/{id}/defer
-PUT  /api/v1/tasks/{id}
-GET  /api/v1/projects
-GET  /api/v1/projects/{id}
-GET  /api/v1/projects/{id}/progress
-GET  /api/v1/projects/{id}/activity
-GET  /api/v1/projects/{projectId}/tasks
-GET  /api/v1/projects/{projectId}/proposals
-GET  /api/v1/projects/{projectId}/proposals/{proposalId}
-POST /api/v1/incidents
-GET  /api/v1/incidents
-GET  /api/v1/incidents/{id}
-GET  /api/v1/treatment-plans/{id}
-GET  /api/v1/weather/latest
-GET  /api/v1/weather/impacts
-POST /api/v1/weather/refresh
-GET  /api/v1/activity
-GET  /api/v1/tasks/{id}/activity
-GET  /api/v1/plants/{id}/activity
-GET  /api/v1/incidents/{id}/activity
-POST /api/v1/media
-GET  /api/v1/media/{id}
+POST /api/v1/chat                    agent — non-streaming agent turn
+POST /api/v1/chat/stream             agent — SSE streaming agent turn (text/event-stream)
+POST /api/v1/chat/resume             agent — resume paused interaction (non-streaming)
+POST /api/v1/chat/resume/stream      agent — resume paused interaction with SSE streaming
 ```
 
-Alerts + monitor (calendula — phases 1–4):
+Garden — profile, beds, containers, plants:
 ```
-GET    /api/v1/alerts                  — active (pending, non-expired) alerts for this user
-POST   /api/v1/alerts/{id}/dismiss     — dismiss an alert
-POST   /api/v1/weather/monitor         — manually trigger weather_job
-POST   /api/v1/triage/monitor          — manually trigger triage_job
-POST   /api/v1/tasks/series/run        — manually trigger series materialization
-GET    /api/v1/monitor/runs            — recent MonitorRun records (health/debug)
-GET    /api/v1/monitor/runs/{id}       — specific run status and summary
+GET    /api/v1/garden/profile                          data
+PATCH  /api/v1/garden/profile                          data
+
+GET    /api/v1/garden/beds                             data
+PATCH  /api/v1/garden/beds/{id}                        data
+DELETE /api/v1/garden/beds/{id}                        data
+GET    /api/v1/garden/beds/{id}/care/state             data
+GET    /api/v1/garden/beds/{id}/care/history           data
+GET    /api/v1/garden/beds/{id}/activity               data
+
+GET    /api/v1/garden/containers                       data
+POST   /api/v1/garden/containers                       data
+PATCH  /api/v1/garden/containers/{id}                  data
+DELETE /api/v1/garden/containers/{id}                  data
+GET    /api/v1/garden/containers/{id}/care/state       data
+GET    /api/v1/garden/containers/{id}/care/history     data
+GET    /api/v1/garden/containers/{id}/activity         data
+
+GET    /api/v1/garden/plants                                   data
+POST   /api/v1/garden/plants                                   data
+PATCH  /api/v1/garden/plants/{id}                              data
+PATCH  /api/v1/garden/plants/{id}/remove                       data — soft delete (died/harvested, keeps record)
+DELETE /api/v1/garden/plants/{id}                              data — hard delete (data entry mistake only)
+POST   /api/v1/garden/plants/batch                             data
+PATCH  /api/v1/garden/plants/batch                             data
+PATCH  /api/v1/garden/plants/batch/remove                      data
+GET    /api/v1/garden/plants/{id}/care/state           data
+GET    /api/v1/garden/plants/{id}/care/history         data
+GET    /api/v1/garden/plants/{id}/activity             data
+
+GET    /api/v1/garden/batches                          data
+DELETE /api/v1/garden/batches/{id}                     data
+GET    /api/v1/garden/batches/{id}/activity            data
+
+GET    /api/v1/garden/search                           data
+GET    /api/v1/garden/locations/{location}             data
+```
+
+Projects:
+```
+GET    /api/v1/projects                                        data
+POST   /api/v1/projects                                        data
+GET    /api/v1/projects/{id}                                   data
+PATCH  /api/v1/projects/{id}                                   data
+DELETE /api/v1/projects/{id}                                   data
+GET    /api/v1/projects/{id}/progress                          data
+GET    /api/v1/projects/{id}/tasks                             data
+POST   /api/v1/projects/{id}/tasks/generate                    agent
+GET    /api/v1/projects/{id}/beds                              data
+POST   /api/v1/projects/{id}/beds/{bedId}                      data
+DELETE /api/v1/projects/{id}/beds/{bedId}                      data
+POST   /api/v1/projects/{id}/beds/batch                        data
+GET    /api/v1/projects/{id}/containers                        data
+POST   /api/v1/projects/{id}/containers/{containerId}          data
+DELETE /api/v1/projects/{id}/containers/{containerId}          data
+POST   /api/v1/projects/{id}/containers/batch                  data
+POST   /api/v1/projects/{id}/plants/{plantId}                  data
+DELETE /api/v1/projects/{id}/plants/{plantId}                  data
+GET    /api/v1/projects/{id}/brief                             data
+PATCH  /api/v1/projects/{id}/brief                             data
+GET    /api/v1/projects/{id}/proposals                         data
+GET    /api/v1/projects/{id}/proposals/{proposalId}            data
+POST   /api/v1/projects/{id}/proposals/{proposalId}/accept     data
+GET    /api/v1/projects/{id}/series                            data
+```
+
+Tasks:
+```
+GET    /api/v1/tasks/daily                     data — top-N by priority score
+GET    /api/v1/tasks/due                       data — due within N days
+GET    /api/v1/tasks/blocked                   data — blocked by dependencies
+GET    /api/v1/tasks/{id}                      data
+PATCH  /api/v1/tasks/{id}                      data
+POST   /api/v1/tasks/{id}/start                data
+POST   /api/v1/tasks/{id}/complete             data
+POST   /api/v1/tasks/{id}/skip                 data
+POST   /api/v1/tasks/{id}/defer                data
+GET    /api/v1/tasks/{id}/blockers             data
+GET    /api/v1/tasks/{id}/activity             data
+POST   /api/v1/tasks/materialize               data — materialize due recurring tasks
+PATCH  /api/v1/tasks/series/{id}               data
+```
+
+Triage:
+```
+POST   /api/v1/triage/run                      agent — LLM triage analysis
+GET    /api/v1/triage/latest                   data
+GET    /api/v1/triage/recommendations          data
+POST   /api/v1/triage/monitor                  data — trigger triage_job (monitor runner)
+```
+
+Weather:
+```
+GET    /api/v1/weather/latest                  data
+GET    /api/v1/weather/tasks/impacted          data
+POST   /api/v1/weather/refresh                 data — fetch new Open-Meteo snapshot
+POST   /api/v1/weather/tasks/draft             agent — LLM weather impact analysis
+PATCH  /api/v1/weather/changesets/{id}/approve data
+POST   /api/v1/weather/monitor                 data — trigger weather_job (monitor runner)
+```
+
+Incidents & treatment:
+```
+GET    /api/v1/incidents                               data
+POST   /api/v1/incidents                               data
+GET    /api/v1/incidents/{id}                          data
+PATCH  /api/v1/incidents/{id}/resolve                  data
+POST   /api/v1/incidents/{id}/treatment                agent — LLM treatment plan drafting
+GET    /api/v1/incidents/{id}/treatment                data
+PATCH  /api/v1/treatment-plans/{id}/approve            data
+GET    /api/v1/incidents/{id}/activity                 data
+```
+
+Interactions:
+```
+GET    /api/v1/interactions/pending            data
+GET    /api/v1/interactions/recent             data
+GET    /api/v1/interactions/{id}               data
+POST   /api/v1/interactions/{id}/resolve       data
+```
+
+Alerts & monitor:
+```
+GET    /api/v1/alerts                          data — pending non-expired alerts
+POST   /api/v1/alerts/{id}/dismiss             data
+GET    /api/v1/monitor/runs                    data
+GET    /api/v1/monitor/runs/{id}               data
+POST   /api/v1/tasks/series/run                data — trigger series_job (monitor runner)
+```
+
+Activity:
+```
+GET    /api/v1/activity                        data — global activity feed
+GET    /api/v1/projects/{id}/activity          data — cross-object project timeline (see below)
+```
+
+Both activity endpoints support filtering and cursor pagination via query parameters:
+
+```
+?category=task|project|interaction|weather|incident
+?event_type=task_completed|task_deferred|task_started|project_created|...
+?since=2026-06-01T00:00:00        — ISO datetime, lower bound
+?before_timestamp=2026-06-18T...  — ISO datetime, cursor for next page
+?limit=20                          — default 20, max 100
+```
+
+`before_timestamp` is the cursor — pass the `created_at` of the last item received
+to get the next page. This enables infinite scroll without offset-based pagination
+drift on a live feed.
+
+Media (Phase 4, stubs for now):
+```
+POST   /api/v1/media
+GET    /api/v1/media/{id}
 ```
 
 ## Recommended build order
