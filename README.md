@@ -69,7 +69,7 @@ Regenerate the spec after handler changes:
 |---|---|
 | [rhizome](https://github.com/ybordag/rhizome) | AI agent + domain engine (Python, LangGraph) |
 | verdant | React frontend |
-| fairlead | Inference router (Go/Rust, planned) |
+| [fairlead](https://github.com/ybordag/fairlead) | Inference router (Rust, in progress) |
 
 ## License
 
