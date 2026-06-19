@@ -207,3 +207,66 @@ func TestLogout_ThenRefreshFails(t *testing.T) {
 		t.Errorf("refresh after logout: got %d, want 401", rec2.Code)
 	}
 }
+
+func TestUpdateProfile(t *testing.T) {
+	srv := newTestServer(t)
+	token := registerAndGetToken(t, srv, "profile-test@example.com")
+
+	resp := doRequestWithToken(t, srv, "PATCH", "/auth/profile",
+		`{"preferred_provider":"openai","preferred_model":"gpt-4o"}`, token)
+	if resp.Code != http.StatusOK {
+		t.Fatalf("update profile: got %d — %s", resp.Code, resp.Body)
+	}
+	var out map[string]any
+	json.NewDecoder(resp.Body).Decode(&out)
+	if out["preferred_provider"] != "openai" {
+		t.Errorf("preferred_provider: got %v, want openai", out["preferred_provider"])
+	}
+	if out["preferred_model"] != "gpt-4o" {
+		t.Errorf("preferred_model: got %v, want gpt-4o", out["preferred_model"])
+	}
+}
+
+func TestUpdateProfile_EmptyBodyReturns400(t *testing.T) {
+	srv := newTestServer(t)
+	token := registerAndGetToken(t, srv, "profile-empty@example.com")
+
+	resp := doRequestWithToken(t, srv, "PATCH", "/auth/profile", `{}`, token)
+	if resp.Code != http.StatusBadRequest {
+		t.Errorf("empty profile update: got %d, want 400", resp.Code)
+	}
+}
+
+func TestChangePassword_Success(t *testing.T) {
+	srv := newTestServer(t)
+	token := registerAndGetToken(t, srv, "pwchange@example.com")
+
+	resp := doRequestWithToken(t, srv, "POST", "/auth/password",
+		`{"current_password":"pw12345678","new_password":"newpassword456"}`, token)
+	if resp.Code != http.StatusOK {
+		t.Fatalf("change password: got %d — %s", resp.Code, resp.Body)
+	}
+	// Old password should no longer work
+	loginResp := doRequest(t, srv, "POST", "/auth/login",
+		`{"email":"pwchange@example.com","password":"pw12345678"}`)
+	if loginResp.Code != http.StatusUnauthorized {
+		t.Errorf("old password should fail after change: got %d", loginResp.Code)
+	}
+	// New password should work
+	loginResp2 := doRequest(t, srv, "POST", "/auth/login",
+		`{"email":"pwchange@example.com","password":"newpassword456"}`)
+	if loginResp2.Code != http.StatusOK {
+		t.Errorf("new password should work: got %d", loginResp2.Code)
+	}
+}
+
+func TestChangePassword_WrongCurrentReturns401(t *testing.T) {
+	srv := newTestServer(t)
+	token := registerAndGetToken(t, srv, "pwwrong@example.com")
+
+	resp := doRequestWithToken(t, srv, "POST", "/auth/password",
+		`{"current_password":"wrong-password","new_password":"newpassword456"}`, token)
+	if resp.Code != http.StatusUnauthorized {
+		t.Errorf("wrong current password: got %d, want 401", resp.Code)
+	}
+}
