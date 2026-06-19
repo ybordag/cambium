@@ -12,6 +12,7 @@ func NewRouter(pool *pgxpool.Pool) http.Handler {
 	ph := newProxyHandler(pool)
 	ah := &authHandler{pool: pool}
 	kh := &keysHandler{pool: pool}
+	th := &threadHandler{pool: pool, rhizome: ph.rhizome}
 
 	// -------------------------------------------------------------------------
 	// Public
@@ -199,6 +200,16 @@ func NewRouter(pool *pgxpool.Pool) http.Handler {
 	mux.Handle("GET /api/v1/monitor/runs", RequireAuth(http.HandlerFunc(ph.proxyData("monitor/runs"))))
 	mux.Handle("GET /api/v1/monitor/runs/{id}", RequireAuth(ph.proxyDataWithPathParam("monitor/runs", "id")))
 	mux.Handle("POST /api/v1/tasks/series/run", RequireAuth(http.HandlerFunc(ph.proxyData("tasks/series/run"))))
+
+	// -------------------------------------------------------------------------
+	// Threads — conversation management
+	// -------------------------------------------------------------------------
+
+	mux.Handle("POST /api/v1/threads", RequireAuth(http.HandlerFunc(th.createThread)))
+	mux.Handle("GET /api/v1/threads", RequireAuth(http.HandlerFunc(ph.proxyData("threads"))))
+	mux.Handle("GET /api/v1/threads/{id}/messages", RequireAuth(ph.proxyDataWithPathParam("threads", "id")))
+	mux.Handle("GET /api/v1/threads/{id}", RequireAuth(ph.proxyDataWithPathParam("threads", "id")))
+	mux.Handle("DELETE /api/v1/threads/{id}", RequireAuth(ph.proxyDataWithPathParam("threads", "id")))
 
 	// -------------------------------------------------------------------------
 	// Activity
