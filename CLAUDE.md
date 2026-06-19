@@ -399,7 +399,22 @@ POST   /api/v1/tasks/series/run                data — trigger series_job (moni
 Activity:
 ```
 GET    /api/v1/activity                        data — global activity feed
+GET    /api/v1/projects/{id}/activity          data — cross-object project timeline (see below)
 ```
+
+Both activity endpoints support filtering and cursor pagination via query parameters:
+
+```
+?category=task|project|interaction|weather|incident
+?event_type=task_completed|task_deferred|task_started|project_created|...
+?since=2026-06-01T00:00:00        — ISO datetime, lower bound
+?before_timestamp=2026-06-18T...  — ISO datetime, cursor for next page
+?limit=20                          — default 20, max 100
+```
+
+`before_timestamp` is the cursor — pass the `created_at` of the last item received
+to get the next page. This enables infinite scroll without offset-based pagination
+drift on a live feed.
 
 Media (Phase 4, stubs for now):
 ```
