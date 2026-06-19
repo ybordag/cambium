@@ -40,25 +40,50 @@ func TestAllProtectedRoutesReject401(t *testing.T) {
 		{"GET", "/api/v1/garden/profile"},
 		{"PATCH", "/api/v1/garden/profile"},
 		{"GET", "/api/v1/garden/beds"},
+		{"POST", "/api/v1/garden/beds"},
+		{"GET", "/api/v1/garden/beds/some-bed-id"},
+		{"PATCH", "/api/v1/garden/beds/some-bed-id"},
+		{"DELETE", "/api/v1/garden/beds/some-bed-id"},
+		{"GET", "/api/v1/garden/beds/some-bed-id/care/state"},
 		{"GET", "/api/v1/garden/containers"},
 		{"POST", "/api/v1/garden/containers"},
+		{"GET", "/api/v1/garden/containers/some-container-id"},
+		{"PATCH", "/api/v1/garden/containers/some-container-id"},
+		{"DELETE", "/api/v1/garden/containers/some-container-id"},
+		{"GET", "/api/v1/garden/containers/some-container-id/care/state"},
 		{"GET", "/api/v1/garden/plants"},
 		{"POST", "/api/v1/garden/plants"},
+		{"GET", "/api/v1/garden/plants/some-plant-id"},
+		{"PATCH", "/api/v1/garden/plants/some-plant-id"},
+		{"DELETE", "/api/v1/garden/plants/some-plant-id"},
+		{"GET", "/api/v1/garden/plants/some-plant-id/care/state"},
 		{"GET", "/api/v1/garden/batches"},
 		{"GET", "/api/v1/garden/search"},
 
 		// Tasks
+		{"GET", "/api/v1/tasks"},
+		{"POST", "/api/v1/tasks"},
 		{"GET", "/api/v1/tasks/daily"},
 		{"GET", "/api/v1/tasks/due"},
 		{"GET", "/api/v1/tasks/blocked"},
 		{"GET", "/api/v1/tasks/some-task-id"},
+		{"PATCH", "/api/v1/tasks/some-task-id"},
+		{"DELETE", "/api/v1/tasks/some-task-id"},
 		{"POST", "/api/v1/tasks/some-task-id/start"},
 		{"POST", "/api/v1/tasks/some-task-id/complete"},
+		{"POST", "/api/v1/tasks/some-task-id/skip"},
+		{"POST", "/api/v1/tasks/some-task-id/defer"},
 
 		// Projects
 		{"GET", "/api/v1/projects"},
 		{"POST", "/api/v1/projects"},
 		{"GET", "/api/v1/projects/some-project-id"},
+		{"PATCH", "/api/v1/projects/some-project-id"},
+		{"DELETE", "/api/v1/projects/some-project-id"},
+		{"GET", "/api/v1/projects/some-project-id/tasks"},
+		{"GET", "/api/v1/projects/some-project-id/beds"},
+		{"GET", "/api/v1/projects/some-project-id/containers"},
+		{"GET", "/api/v1/projects/some-project-id/progress"},
 
 		// Triage
 		{"POST", "/api/v1/triage/run"},
@@ -85,6 +110,7 @@ func TestAllProtectedRoutesReject401(t *testing.T) {
 
 		// Activity
 		{"GET", "/api/v1/activity"},
+		{"GET", "/api/v1/activity/stats"},
 	}
 
 	for _, r := range routes {

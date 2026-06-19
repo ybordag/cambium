@@ -55,6 +55,8 @@ func NewRouter(pool *pgxpool.Pool) http.Handler {
 	// -------------------------------------------------------------------------
 
 	mux.Handle("GET /api/v1/garden/beds", RequireAuth(http.HandlerFunc(ph.proxyData("garden/beds"))))
+	mux.Handle("POST /api/v1/garden/beds", RequireAuth(http.HandlerFunc(ph.proxyData("garden/beds"))))
+	mux.Handle("GET /api/v1/garden/beds/{id}", RequireAuth(ph.proxyDataWithPathParam("garden/beds", "id")))
 	mux.Handle("PATCH /api/v1/garden/beds/{id}", RequireAuth(ph.proxyDataWithPathParam("garden/beds", "id")))
 	mux.Handle("DELETE /api/v1/garden/beds/{id}", RequireAuth(ph.proxyDataWithPathParam("garden/beds", "id")))
 	mux.Handle("GET /api/v1/garden/beds/{id}/care/state", RequireAuth(ph.proxyDataWithPathParam("garden/beds", "id")))
@@ -67,6 +69,7 @@ func NewRouter(pool *pgxpool.Pool) http.Handler {
 
 	mux.Handle("GET /api/v1/garden/containers", RequireAuth(http.HandlerFunc(ph.proxyData("garden/containers"))))
 	mux.Handle("POST /api/v1/garden/containers", RequireAuth(http.HandlerFunc(ph.proxyData("garden/containers"))))
+	mux.Handle("GET /api/v1/garden/containers/{id}", RequireAuth(ph.proxyDataWithPathParam("garden/containers", "id")))
 	mux.Handle("PATCH /api/v1/garden/containers/{id}", RequireAuth(ph.proxyDataWithPathParam("garden/containers", "id")))
 	mux.Handle("DELETE /api/v1/garden/containers/{id}", RequireAuth(ph.proxyDataWithPathParam("garden/containers", "id")))
 	mux.Handle("GET /api/v1/garden/containers/{id}/care/state", RequireAuth(ph.proxyDataWithPathParam("garden/containers", "id")))
@@ -82,6 +85,7 @@ func NewRouter(pool *pgxpool.Pool) http.Handler {
 	mux.Handle("POST /api/v1/garden/plants/batch", RequireAuth(http.HandlerFunc(ph.proxyData("garden/plants/batch"))))
 	mux.Handle("PATCH /api/v1/garden/plants/batch/remove", RequireAuth(http.HandlerFunc(ph.proxyData("garden/plants/batch/remove"))))
 	mux.Handle("PATCH /api/v1/garden/plants/batch", RequireAuth(http.HandlerFunc(ph.proxyData("garden/plants/batch"))))
+	mux.Handle("GET /api/v1/garden/plants/{id}", RequireAuth(ph.proxyDataWithPathParam("garden/plants", "id")))
 	mux.Handle("PATCH /api/v1/garden/plants/{id}", RequireAuth(ph.proxyDataWithPathParam("garden/plants", "id")))
 	mux.Handle("PATCH /api/v1/garden/plants/{id}/remove", RequireAuth(ph.proxyDataWithPathParam("garden/plants", "id")))
 	mux.Handle("DELETE /api/v1/garden/plants/{id}", RequireAuth(ph.proxyDataWithPathParam("garden/plants", "id")))
@@ -122,9 +126,11 @@ func NewRouter(pool *pgxpool.Pool) http.Handler {
 	mux.Handle("GET /api/v1/projects/{id}/tasks", RequireAuth(ph.proxyDataWithPathParam("projects", "id")))
 	mux.Handle("POST /api/v1/projects/{id}/tasks/generate", RequireAuth(http.HandlerFunc(ph.triggerTaskGeneration)))
 	mux.Handle("GET /api/v1/projects/{id}/series", RequireAuth(ph.proxyDataWithPathParam("projects", "id")))
+	mux.Handle("GET /api/v1/projects/{id}/beds", RequireAuth(ph.proxyDataWithPathParam("projects", "id")))
 	mux.Handle("POST /api/v1/projects/{id}/beds/batch", RequireAuth(ph.proxyDataWithPathParam("projects", "id")))
 	mux.Handle("POST /api/v1/projects/{id}/beds/{bedId}", RequireAuth(ph.proxyDataWithPathParam("projects", "id")))
 	mux.Handle("DELETE /api/v1/projects/{id}/beds/{bedId}", RequireAuth(ph.proxyDataWithPathParam("projects", "id")))
+	mux.Handle("GET /api/v1/projects/{id}/containers", RequireAuth(ph.proxyDataWithPathParam("projects", "id")))
 	mux.Handle("POST /api/v1/projects/{id}/containers/batch", RequireAuth(ph.proxyDataWithPathParam("projects", "id")))
 	mux.Handle("POST /api/v1/projects/{id}/containers/{containerId}", RequireAuth(ph.proxyDataWithPathParam("projects", "id")))
 	mux.Handle("DELETE /api/v1/projects/{id}/containers/{containerId}", RequireAuth(ph.proxyDataWithPathParam("projects", "id")))
@@ -136,6 +142,8 @@ func NewRouter(pool *pgxpool.Pool) http.Handler {
 	// Tasks (literal routes before {id} wildcard)
 	// -------------------------------------------------------------------------
 
+	mux.Handle("GET /api/v1/tasks", RequireAuth(http.HandlerFunc(ph.proxyData("tasks"))))
+	mux.Handle("POST /api/v1/tasks", RequireAuth(http.HandlerFunc(ph.proxyData("tasks"))))
 	mux.Handle("GET /api/v1/tasks/daily", RequireAuth(http.HandlerFunc(ph.proxyData("tasks/daily"))))
 	mux.Handle("GET /api/v1/tasks/due", RequireAuth(http.HandlerFunc(ph.proxyData("tasks/due"))))
 	mux.Handle("GET /api/v1/tasks/blocked", RequireAuth(http.HandlerFunc(ph.proxyData("tasks/blocked"))))
@@ -143,6 +151,7 @@ func NewRouter(pool *pgxpool.Pool) http.Handler {
 	mux.Handle("PATCH /api/v1/tasks/series/{id}", RequireAuth(ph.proxyDataWithPathParam("tasks/series", "id")))
 	mux.Handle("GET /api/v1/tasks/{id}", RequireAuth(ph.proxyDataWithPathParam("tasks", "id")))
 	mux.Handle("PATCH /api/v1/tasks/{id}", RequireAuth(ph.proxyDataWithPathParam("tasks", "id")))
+	mux.Handle("DELETE /api/v1/tasks/{id}", RequireAuth(ph.proxyDataWithPathParam("tasks", "id")))
 	mux.Handle("POST /api/v1/tasks/{id}/start", RequireAuth(ph.proxyDataWithPathParam("tasks", "id")))
 	mux.Handle("POST /api/v1/tasks/{id}/complete", RequireAuth(ph.proxyDataWithPathParam("tasks", "id")))
 	mux.Handle("POST /api/v1/tasks/{id}/skip", RequireAuth(ph.proxyDataWithPathParam("tasks", "id")))
@@ -217,6 +226,7 @@ func NewRouter(pool *pgxpool.Pool) http.Handler {
 	// -------------------------------------------------------------------------
 
 	mux.Handle("GET /api/v1/activity", RequireAuth(http.HandlerFunc(ph.proxyData("activity"))))
+	mux.Handle("GET /api/v1/activity/stats", RequireAuth(http.HandlerFunc(ph.proxyData("activity/stats"))))
 
 	// -------------------------------------------------------------------------
 	// Media (stubs — Epic 2 / image processing)
