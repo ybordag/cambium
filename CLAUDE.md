@@ -174,10 +174,18 @@ It presents two surfaces — Cambium routes to the right one based on request ty
 ### Agent endpoint — AI operations
 
 For requests that require LangGraph reasoning (triage, interactions, care analysis,
-incident analysis, complex queries):
+incident analysis, complex queries). Two variants — streaming and non-streaming:
+
+```
+POST /internal/agent              — non-streaming (returns complete response)
+POST /internal/agent/stream       — SSE streaming (tokens arrive as produced)
+POST /internal/agent/resume       — resume paused interaction (non-streaming)
+POST /internal/agent/resume/stream — resume with SSE streaming
+```
+
+Request body (all four endpoints):
 
 ```json
-POST /internal/agent
 {
   "user_id": "abc-123",
   "thread_id": "thread-xyz",
@@ -187,6 +195,16 @@ POST /internal/agent
   "model": "gemini-1.5-flash"
 }
 ```
+
+SSE event format:
+
+```
+data: {"type": "token",       "content": "The garden "}
+data: {"type": "interaction", "payload": {...}}
+data: {"type": "done"}
+```
+
+Cambium proxies SSE streams directly to Verdant with `io.Copy` — no buffering.
 
 ### Data endpoint — direct reads and writes
 
@@ -232,6 +250,14 @@ Key management (require valid JWT):
 PUT    /api/v1/auth/keys              { provider, key }
 GET    /api/v1/auth/keys
 DELETE /api/v1/auth/keys/{provider}
+```
+
+Chat (require valid JWT):
+```
+POST /api/v1/chat               — non-streaming agent turn (request/response)
+POST /api/v1/chat/stream        — SSE streaming agent turn (text/event-stream)
+POST /api/v1/chat/resume        — resume paused interaction (non-streaming)
+POST /api/v1/chat/resume/stream — resume paused interaction with SSE streaming
 ```
 
 Protected (require valid JWT):
