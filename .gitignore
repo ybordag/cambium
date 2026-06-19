@@ -1,0 +1,10 @@
+# Environment
+.env
+
+# Build output
+cambium
+/cambium
+
+# Go
+*.test
+*.out
