@@ -56,9 +56,11 @@ JWT_SECRET=<generate with: openssl rand -hex 32>
 CAMBIUM_ENCRYPTION_KEY=<generate with: openssl rand -hex 16>
 RHIZOME_INTERNAL_URL=http://localhost:8001
 PORT=8080
+STATIC_DIR=./dist
 ```
 
 **Important notes:**
+- `STATIC_DIR` points at the built Verdant Pages `dist/` folder — Cambium serves it for any path not claimed by `/api/v1/*`, `/auth/*`, `/health`, or `/docs/*`, with SPA fallback to `index.html`. Defaults to `./dist` if unset.
 - `JWT_SECRET` must be at least 32 bytes
 - `CAMBIUM_ENCRYPTION_KEY` must be exactly 32 bytes — this encrypts user provider keys at rest
 - `DATABASE_URL` uses plain `postgresql://` (pgx driver), not `postgresql+psycopg2://` which Rhizome uses
