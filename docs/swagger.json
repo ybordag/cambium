@@ -450,6 +450,42 @@
                 }
             }
         },
+        "/api/v1/notifications/stream": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "text/event-stream"
+                ],
+                "tags": [
+                    "notifications"
+                ],
+                "summary": "Notification stream (SSE)",
+                "responses": {
+                    "200": {
+                        "description": "SSE stream of typed events (alert, interaction_pending, job_started/job_step/job_complete/job_failed, heartbeat)",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/api.ErrorResponse"
+                        }
+                    },
+                    "502": {
+                        "description": "Bad Gateway",
+                        "schema": {
+                            "$ref": "#/definitions/api.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/projects/{id}/tasks/generate": {
             "post": {
                 "security": [

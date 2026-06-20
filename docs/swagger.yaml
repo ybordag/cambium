@@ -427,6 +427,29 @@ paths:
       summary: Draft treatment plan (AI)
       tags:
       - incidents
+  /api/v1/notifications/stream:
+    get:
+      produces:
+      - text/event-stream
+      responses:
+        "200":
+          description: SSE stream of typed events (alert, interaction_pending, job_started/job_step/job_complete/job_failed,
+            heartbeat)
+          schema:
+            type: string
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "502":
+          description: Bad Gateway
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Notification stream (SSE)
+      tags:
+      - notifications
   /api/v1/projects/{id}/tasks/generate:
     post:
       consumes:

@@ -231,6 +231,34 @@ func (h *proxyHandler) chatResumeStream(w http.ResponseWriter, r *http.Request) 
 }
 
 // -------------------------------------------------------------------------
+// Notifications — long-lived SSE stream (GET, not POST like chat)
+// -------------------------------------------------------------------------
+
+// notificationStream proxies GET /internal/data/notifications/stream as a
+// long-lived SSE connection. Unlike the chat stream endpoints, this is a GET
+// with no request body — the verified user_id is the only required param.
+// The frontend opens this once on app mount and keeps it open for the session.
+//
+//	@Summary	Notification stream (SSE)
+//	@Tags		notifications
+//	@Produce	text/event-stream
+//	@Security	BearerAuth
+//	@Success	200	{string}	string	"SSE stream of typed events (alert, interaction_pending, job_started/job_step/job_complete/job_failed, heartbeat)"
+//	@Failure	401	{object}	ErrorResponse
+//	@Failure	502	{object}	ErrorResponse
+//	@Router		/api/v1/notifications/stream [get]
+func (h *proxyHandler) notificationStream(w http.ResponseWriter, r *http.Request) {
+	userID, _ := UserIDFromContext(r.Context())
+	stream, err := h.rhizome.StreamData("notifications/stream", userID, nil)
+	if err != nil {
+		writeError(w, http.StatusBadGateway, "rhizome stream unavailable: "+err.Error())
+		return
+	}
+	defer stream.Close()
+	proxySSE(w, stream)
+}
+
+// -------------------------------------------------------------------------
 // Data proxy — CRUD pass-through
 // -------------------------------------------------------------------------
 

@@ -165,3 +165,72 @@ func TestDispatchData_SearchForwardsQueryParams(t *testing.T) {
 		t.Fatalf("got status %d: %s", rec.Code, rec.Body)
 	}
 }
+
+func TestNotificationStream_ForwardsAsSSE(t *testing.T) {
+	ssePayload := "data: {\"type\":\"heartbeat\"}\n\n"
+	fakeRhizomeData(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			t.Errorf("expected GET, got %s", r.Method)
+		}
+		if r.URL.Path != "/internal/data/notifications/stream" {
+			t.Errorf("unexpected path: %s", r.URL.Path)
+		}
+		if r.URL.Query().Get("user_id") != "user-1" {
+			t.Errorf("user_id not forwarded: %s", r.URL.RawQuery)
+		}
+		w.Header().Set("Content-Type", "text/event-stream")
+		w.Write([]byte(ssePayload))
+	})
+
+	ph := newProxyHandler(nil)
+	rec := httptest.NewRecorder()
+	req := newProxyRequest(http.MethodGet, "/api/v1/notifications/stream", "", "user-1")
+	ph.notificationStream(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("got status %d: %s", rec.Code, rec.Body)
+	}
+	if rec.Header().Get("Content-Type") != "text/event-stream" {
+		t.Errorf("got Content-Type %q", rec.Header().Get("Content-Type"))
+	}
+	if rec.Body.String() != ssePayload {
+		t.Errorf("got body %q, want %q", rec.Body.String(), ssePayload)
+	}
+}
+
+func TestNotificationStream_RhizomeUnavailableReturns502(t *testing.T) {
+	fakeRhizomeData(t, func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+	})
+
+	ph := newProxyHandler(nil)
+	rec := httptest.NewRecorder()
+	req := newProxyRequest(http.MethodGet, "/api/v1/notifications/stream", "", "user-1")
+	ph.notificationStream(rec, req)
+
+	if rec.Code != http.StatusBadGateway {
+		t.Fatalf("got status %d, want 502", rec.Code)
+	}
+}
+
+func TestNotifications_DataProxyForwardsSinceParam(t *testing.T) {
+	fakeRhizomeData(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/internal/data/notifications" {
+			t.Errorf("unexpected path: %s", r.URL.Path)
+		}
+		if r.URL.Query().Get("since") != "2026-06-20T00:00:00" {
+			t.Errorf("since param not forwarded: %s", r.URL.RawQuery)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{"alerts":[],"pending_interactions":[],"active_jobs":[]}`))
+	})
+
+	ph := newProxyHandler(nil)
+	rec := httptest.NewRecorder()
+	req := newProxyRequest(http.MethodGet, "/api/v1/notifications?since=2026-06-20T00:00:00", "", "user-1")
+	ph.proxyData("notifications")(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("got status %d: %s", rec.Code, rec.Body)
+	}
+}

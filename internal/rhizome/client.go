@@ -187,3 +187,32 @@ func (c *Client) openStream(endpoint string, payload any) (io.ReadCloser, error)
 	}
 	return resp.Body, nil
 }
+
+// StreamData calls GET /internal/data/{path}?user_id=...&{params} and returns
+// the raw streaming response body — caller must close it. Used for long-lived
+// SSE GET endpoints on the data surface (e.g. the notification stream), as
+// opposed to openStream which POSTs a JSON body to the agent surface.
+func (c *Client) StreamData(path, userID string, params url.Values) (io.ReadCloser, error) {
+	if params == nil {
+		params = url.Values{}
+	}
+	params.Set("user_id", userID)
+	u := fmt.Sprintf("%s/internal/data/%s?%s", c.baseURL, path, params.Encode())
+
+	req, err := http.NewRequest(http.MethodGet, u, nil)
+	if err != nil {
+		return nil, fmt.Errorf("build rhizome stream request: %w", err)
+	}
+	// Streaming requests must not time out mid-stream — use a client without timeout.
+	streamClient := &http.Client{}
+	resp, err := streamClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("open stream %s: %w", path, err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		b, _ := io.ReadAll(resp.Body)
+		resp.Body.Close()
+		return nil, fmt.Errorf("stream %s returned %d: %s", path, resp.StatusCode, b)
+	}
+	return resp.Body, nil
+}

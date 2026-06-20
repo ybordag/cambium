@@ -229,6 +229,13 @@ func NewRouter(pool *pgxpool.Pool) http.Handler {
 	mux.Handle("POST /api/v1/interactions/{id}/resolve", RequireAuth(ph.proxyDataWithPathParam("interactions", "id")))
 
 	// -------------------------------------------------------------------------
+	// Notifications
+	// -------------------------------------------------------------------------
+
+	mux.Handle("GET /api/v1/notifications/stream", RequireAuth(http.HandlerFunc(ph.notificationStream)))
+	mux.Handle("GET /api/v1/notifications", RequireAuth(http.HandlerFunc(ph.proxyData("notifications"))))
+
+	// -------------------------------------------------------------------------
 	// Alerts + monitor runs
 	// -------------------------------------------------------------------------
 
