@@ -154,6 +154,10 @@ func TestAllProtectedRoutesReject401(t *testing.T) {
 		// Activity
 		{"GET", "/api/v1/activity"},
 		{"GET", "/api/v1/activity/stats"},
+
+		// Notifications
+		{"GET", "/api/v1/notifications/stream"},
+		{"GET", "/api/v1/notifications"},
 	}
 
 	for _, r := range routes {
