@@ -213,6 +213,76 @@ func TestRemoveThreadContext_ProxiesAsDelete(t *testing.T) {
 	}
 }
 
+// fakeRhizomeStatus returns a server that always responds with the given
+// status and JSON body, regardless of method or path — used to verify
+// Cambium passes Rhizome's error responses through unchanged.
+func fakeRhizomeStatus(t *testing.T, status int, jsonBody string) *httptest.Server {
+	t.Helper()
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(status)
+		w.Write([]byte(jsonBody))
+	}))
+	t.Cleanup(srv.Close)
+	return srv
+}
+
+func TestAddThreadContext_PassesThroughRhizome409OnDuplicate(t *testing.T) {
+	fake := fakeRhizomeStatus(t, http.StatusConflict, `{"detail":"Entity already in thread context"}`)
+	t.Setenv("RHIZOME_INTERNAL_URL", fake.URL)
+
+	srv := newTestServer(t)
+	token := registerAndGetToken(t, srv, "context-409@example.com")
+
+	resp := doRequestWithToken(t, srv, "POST", "/api/v1/threads/thread-1/context",
+		`{"subject_type":"plant","subject_id":"p1"}`, token)
+	if resp.Code != http.StatusConflict {
+		t.Fatalf("expected 409 passed through from rhizome, got %d — %s", resp.Code, resp.Body)
+	}
+	var out map[string]string
+	json.NewDecoder(resp.Body).Decode(&out)
+	if out["detail"] != "Entity already in thread context" {
+		t.Errorf("expected rhizome body forwarded verbatim, got %v", out)
+	}
+}
+
+func TestAddThreadContext_PassesThroughRhizome400OnLimit(t *testing.T) {
+	fake := fakeRhizomeStatus(t, http.StatusBadRequest, `{"detail":"Thread context limit reached (max 10 items)"}`)
+	t.Setenv("RHIZOME_INTERNAL_URL", fake.URL)
+
+	srv := newTestServer(t)
+	token := registerAndGetToken(t, srv, "context-400@example.com")
+
+	resp := doRequestWithToken(t, srv, "POST", "/api/v1/threads/thread-1/context",
+		`{"subject_type":"bed","subject_id":"b11"}`, token)
+	if resp.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400 passed through from rhizome, got %d — %s", resp.Code, resp.Body)
+	}
+	var out map[string]string
+	json.NewDecoder(resp.Body).Decode(&out)
+	if out["detail"] != "Thread context limit reached (max 10 items)" {
+		t.Errorf("expected rhizome body forwarded verbatim, got %v", out)
+	}
+}
+
+func TestRemoveThreadContext_PassesThroughRhizome404(t *testing.T) {
+	fake := fakeRhizomeStatus(t, http.StatusNotFound, `{"detail":"Context entry not found"}`)
+	t.Setenv("RHIZOME_INTERNAL_URL", fake.URL)
+
+	srv := newTestServer(t)
+	token := registerAndGetToken(t, srv, "context-404@example.com")
+
+	resp := doRequestWithToken(t, srv, "DELETE", "/api/v1/threads/thread-1/context/plant/ghost", "", token)
+	if resp.Code != http.StatusNotFound {
+		t.Fatalf("expected 404 passed through from rhizome, got %d — %s", resp.Code, resp.Body)
+	}
+	var out map[string]string
+	json.NewDecoder(resp.Body).Decode(&out)
+	if out["detail"] != "Context entry not found" {
+		t.Errorf("expected rhizome body forwarded verbatim, got %v", out)
+	}
+}
+
 func TestThreadContext_RequiresAuth(t *testing.T) {
 	srv := newTestServer(t)
 
