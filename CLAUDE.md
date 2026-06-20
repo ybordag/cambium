@@ -73,6 +73,16 @@ Annotations live in the handler files alongside the code they describe. The `int
   `DataGet`/`DataPost`/`DataDelete` are now thin wrappers. 27 new tests (method-dispatch regression,
   multi-segment path forwarding, error-status pass-through, security sweep extended).
   See `docs/DEFERRED_TESTS.md` for consciously deferred coverage on this branch.
+- **Notification SSE stream + sync endpoint** ✓ (rhytidome branch, #19) — `GET /api/v1/notifications/stream`
+  proxies Rhizome's long-lived SSE notification stream; `GET /api/v1/notifications` proxies the sync
+  snapshot. The stream endpoint is a GET with no body (unlike chat/stream's POST), so it needed a new
+  client method, `StreamData` — mirrors `openStream` but issues a GET with query params. 5 new tests.
+- **Static frontend serving** ✓ (rhytidome branch, #21) — `internal/api/static.go` serves the built
+  Verdant Pages `dist/` (`STATIC_DIR` env var, default `./dist`) for any path not claimed by a more
+  specific route; unknown paths fall back to `index.html` for client-side routing. Registered as the
+  catch-all `"/"` pattern — Go's `ServeMux` always prefers the most specific match, so this never
+  shadows `/api/v1/*`, `/auth/*`, `/health`, or `/docs/*` regardless of registration order. 7 new tests
+  including a path-traversal guard and a router-level precedence check.
 
 ## Project layout
 
@@ -111,6 +121,7 @@ JWT_SECRET               — HS256 signing secret, min 32 bytes (required)
 CAMBIUM_ENCRYPTION_KEY   — 32-byte AES-256-GCM master key for provider keys (required)
 RHIZOME_INTERNAL_URL     — Rhizome internal API base URL (default: http://localhost:8001)
 PORT                     — HTTP listen port (default: 8080)
+STATIC_DIR               — Built Verdant Pages dist/ to serve for non-API routes (default: ./dist)
 ```
 
 ## Database design

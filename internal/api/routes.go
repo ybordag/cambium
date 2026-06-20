@@ -296,6 +296,12 @@ func NewRouter(pool *pgxpool.Pool) http.Handler {
 
 	mux.Handle("GET /docs/", httpSwagger.WrapHandler)
 
+	// -------------------------------------------------------------------------
+	// Verdant Pages — static frontend (catch-all, must stay last)
+	// -------------------------------------------------------------------------
+
+	mux.Handle("/", staticFileHandler())
+
 	return mux
 }
 
