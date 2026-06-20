@@ -122,3 +122,52 @@ func TestDataPost_SendsJSON(t *testing.T) {
 		t.Errorf("got status %d", status)
 	}
 }
+
+func TestDataDelete_SendsDeleteMethod(t *testing.T) {
+	_, client := fakeRhizome(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodDelete {
+			t.Errorf("expected DELETE, got %s", r.Method)
+		}
+		if r.URL.Query().Get("user_id") != "user-3" {
+			t.Errorf("user_id not forwarded: %s", r.URL.RawQuery)
+		}
+		if r.ContentLength > 0 {
+			t.Errorf("expected no body on DELETE, got content-length %d", r.ContentLength)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{"status":"deleted"}`))
+	})
+
+	body, status, err := client.DataDelete("threads/thread-1/context/plant/p1", "user-3")
+	if err != nil {
+		t.Fatalf("DataDelete: %v", err)
+	}
+	defer body.Close()
+	if status != http.StatusOK {
+		t.Errorf("got status %d", status)
+	}
+}
+
+func TestDataRequest_PatchSendsPatchMethod(t *testing.T) {
+	_, client := fakeRhizome(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPatch {
+			t.Errorf("expected PATCH, got %s", r.Method)
+		}
+		var body map[string]any
+		json.NewDecoder(r.Body).Decode(&body)
+		if body["status"] != "resolved" {
+			t.Errorf("body not forwarded: %v", body)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
+	})
+
+	body, status, err := client.DataRequest(http.MethodPatch, "incidents/inc-1", "user-1", nil, map[string]any{"status": "resolved"})
+	if err != nil {
+		t.Fatalf("DataRequest PATCH: %v", err)
+	}
+	defer body.Close()
+	if status != http.StatusOK {
+		t.Errorf("got status %d", status)
+	}
+}

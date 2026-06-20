@@ -114,6 +114,12 @@ func NewRouter(pool *pgxpool.Pool) http.Handler {
 	mux.Handle("GET /api/v1/garden/locations/{location}", RequireAuth(ph.proxyDataWithPathParam("garden/locations", "location")))
 
 	// -------------------------------------------------------------------------
+	// Unified search — across all entity types
+	// -------------------------------------------------------------------------
+
+	mux.Handle("GET /api/v1/search", RequireAuth(http.HandlerFunc(ph.proxyData("search"))))
+
+	// -------------------------------------------------------------------------
 	// Projects
 	// -------------------------------------------------------------------------
 
@@ -241,6 +247,8 @@ func NewRouter(pool *pgxpool.Pool) http.Handler {
 	mux.Handle("GET /api/v1/threads/{id}/messages", RequireAuth(ph.proxyDataWithPathParam("threads", "id")))
 	mux.Handle("GET /api/v1/threads/{id}", RequireAuth(ph.proxyDataWithPathParam("threads", "id")))
 	mux.Handle("DELETE /api/v1/threads/{id}", RequireAuth(ph.proxyDataWithPathParam("threads", "id")))
+	mux.Handle("POST /api/v1/threads/{id}/context", RequireAuth(ph.proxyDataWithPathParam("threads", "id")))
+	mux.Handle("DELETE /api/v1/threads/{id}/context/{subjectType}/{subjectId}", RequireAuth(ph.proxyDataWithPathParam("threads", "id")))
 
 	// -------------------------------------------------------------------------
 	// Calendar

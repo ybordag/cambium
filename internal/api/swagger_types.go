@@ -81,13 +81,26 @@ type ResumeRequestBody struct {
 
 // CreateThreadRequest is the optional body for POST /api/v1/threads.
 type CreateThreadRequest struct {
-	Title     string `json:"title,omitempty" example:"Spring tomato project"`
-	ProjectID string `json:"project_id,omitempty" example:"proj-uuid"`
+	Title          string                    `json:"title,omitempty" example:"Spring tomato project"`
+	ProjectID      string                    `json:"project_id,omitempty" example:"proj-uuid"`
+	InitialContext []PinnedContextEntryInput `json:"initial_context,omitempty"`
 }
 
 // ThreadIDResponse is returned by POST /api/v1/threads.
 type ThreadIDResponse struct {
 	ThreadID string `json:"thread_id" example:"silver-fern-cascade"`
+}
+
+// PinnedContextEntryInput is one entity reference in a pinned-context request.
+type PinnedContextEntryInput struct {
+	SubjectType string `json:"subject_type" example:"plant"`
+	SubjectID   string `json:"subject_id" example:"plant-uuid"`
+}
+
+// PinnedContextResponse is returned by the thread context endpoints.
+type PinnedContextResponse struct {
+	ThreadID      string                    `json:"thread_id" example:"silver-fern-cascade"`
+	PinnedContext []PinnedContextEntryInput `json:"pinned_context"`
 }
 
 // --- Errors ---

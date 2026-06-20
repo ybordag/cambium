@@ -534,7 +534,7 @@ const docTemplate = `{
                 "summary": "Create conversation thread",
                 "parameters": [
                     {
-                        "description": "Optional title and project link",
+                        "description": "Optional title, project link, and initial pinned context",
                         "name": "body",
                         "in": "body",
                         "schema": {
@@ -547,6 +547,12 @@ const docTemplate = `{
                         "description": "Botanical thread ID e.g. silver-fern-cascade",
                         "schema": {
                             "$ref": "#/definitions/api.ThreadIDResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.ErrorResponse"
                         }
                     },
                     "401": {
@@ -988,6 +994,12 @@ const docTemplate = `{
         "api.CreateThreadRequest": {
             "type": "object",
             "properties": {
+                "initial_context": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/api.PinnedContextEntryInput"
+                    }
+                },
                 "project_id": {
                     "type": "string",
                     "example": "proj-uuid"
@@ -1061,6 +1073,19 @@ const docTemplate = `{
                 "status": {
                     "type": "string",
                     "example": "logged out"
+                }
+            }
+        },
+        "api.PinnedContextEntryInput": {
+            "type": "object",
+            "properties": {
+                "subject_id": {
+                    "type": "string",
+                    "example": "plant-uuid"
+                },
+                "subject_type": {
+                    "type": "string",
+                    "example": "plant"
                 }
             }
         },

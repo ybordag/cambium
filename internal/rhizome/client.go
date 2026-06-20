@@ -118,34 +118,53 @@ func (c *Client) StreamResume(req ResumeRequest) (io.ReadCloser, error) {
 	return c.openStream("/internal/agent/resume/stream", req)
 }
 
-// DataGet proxies a GET to /internal/data/{path}?user_id=...&{params}.
-// Returns the raw response body — caller closes it.
-func (c *Client) DataGet(path, userID string, params url.Values) (io.ReadCloser, int, error) {
+// DataRequest proxies an arbitrary HTTP method to /internal/data/{path}.
+// params (if any) are merged into the query string alongside user_id; payload
+// (if non-nil) is JSON-encoded as the request body. Returns the raw response
+// body — caller closes it.
+func (c *Client) DataRequest(method, path, userID string, params url.Values, payload any) (io.ReadCloser, int, error) {
 	if params == nil {
 		params = url.Values{}
 	}
 	params.Set("user_id", userID)
 	u := fmt.Sprintf("%s/internal/data/%s?%s", c.baseURL, path, params.Encode())
-	resp, err := c.httpClient.Get(u)
+
+	var bodyReader io.Reader
+	if payload != nil {
+		b, err := json.Marshal(payload)
+		if err != nil {
+			return nil, 0, fmt.Errorf("marshal data payload: %w", err)
+		}
+		bodyReader = bytes.NewReader(b)
+	}
+
+	req, err := http.NewRequest(method, u, bodyReader)
 	if err != nil {
-		return nil, 0, fmt.Errorf("rhizome data GET %s: %w", path, err)
+		return nil, 0, fmt.Errorf("build rhizome data request: %w", err)
+	}
+	if bodyReader != nil {
+		req.Header.Set("Content-Type", "application/json")
+	}
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, 0, fmt.Errorf("rhizome data %s %s: %w", method, path, err)
 	}
 	return resp.Body, resp.StatusCode, nil
 }
 
+// DataGet proxies a GET to /internal/data/{path}?user_id=...&{params}.
+func (c *Client) DataGet(path, userID string, params url.Values) (io.ReadCloser, int, error) {
+	return c.DataRequest(http.MethodGet, path, userID, params, nil)
+}
+
 // DataPost proxies a POST to /internal/data/{path}?user_id=...
-// Returns the raw response body — caller closes it.
 func (c *Client) DataPost(path, userID string, payload any) (io.ReadCloser, int, error) {
-	body, err := json.Marshal(payload)
-	if err != nil {
-		return nil, 0, fmt.Errorf("marshal data payload: %w", err)
-	}
-	u := fmt.Sprintf("%s/internal/data/%s?user_id=%s", c.baseURL, path, url.QueryEscape(userID))
-	resp, err := c.httpClient.Post(u, "application/json", bytes.NewReader(body))
-	if err != nil {
-		return nil, 0, fmt.Errorf("rhizome data POST %s: %w", path, err)
-	}
-	return resp.Body, resp.StatusCode, nil
+	return c.DataRequest(http.MethodPost, path, userID, nil, payload)
+}
+
+// DataDelete proxies a DELETE to /internal/data/{path}?user_id=...
+func (c *Client) DataDelete(path, userID string) (io.ReadCloser, int, error) {
+	return c.DataRequest(http.MethodDelete, path, userID, nil, nil)
 }
 
 // openStream posts JSON to a streaming endpoint and returns the response body

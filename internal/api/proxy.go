@@ -6,15 +6,15 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/ybordag/cambium/internal/auth"
 	"github.com/ybordag/cambium/internal/db"
 	"github.com/ybordag/cambium/internal/rhizome"
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 // proxyHandler holds dependencies for all proxy routes.
 type proxyHandler struct {
-	pool   *pgxpool.Pool
+	pool    *pgxpool.Pool
 	rhizome *rhizome.Client
 }
 
@@ -234,27 +234,28 @@ func (h *proxyHandler) chatResumeStream(w http.ResponseWriter, r *http.Request) 
 // Data proxy — CRUD pass-through
 // -------------------------------------------------------------------------
 
-// proxyData proxies a request to Rhizome's /internal/data/{path} endpoint.
-// GET requests forward query params; POST requests forward the body.
+// dispatchData calls the right Rhizome client method for the request's HTTP
+// method: GET forwards query params, DELETE sends no body, everything else
+// (POST/PATCH/PUT) decodes and forwards the JSON body under its own verb.
+func (h *proxyHandler) dispatchData(r *http.Request, dataPath, userID string) (io.ReadCloser, int, error) {
+	switch r.Method {
+	case http.MethodGet:
+		return h.rhizome.DataGet(dataPath, userID, r.URL.Query())
+	case http.MethodDelete:
+		return h.rhizome.DataDelete(dataPath, userID)
+	default:
+		var payload any
+		json.NewDecoder(r.Body).Decode(&payload)
+		return h.rhizome.DataRequest(r.Method, dataPath, userID, nil, payload)
+	}
+}
+
+// proxyData proxies a request to Rhizome's /internal/data/{path} endpoint,
+// preserving the original HTTP method (GET/POST/PATCH/DELETE).
 func (h *proxyHandler) proxyData(path string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		userID, _ := UserIDFromContext(r.Context())
-
-		var (
-			body   io.ReadCloser
-			status int
-			err    error
-		)
-
-		if r.Method == http.MethodGet {
-			params := r.URL.Query()
-			body, status, err = h.rhizome.DataGet(path, userID, params)
-		} else {
-			var payload any
-			json.NewDecoder(r.Body).Decode(&payload)
-			body, status, err = h.rhizome.DataPost(path, userID, payload)
-		}
-
+		body, status, err := h.dispatchData(r, path, userID)
 		if err != nil {
 			writeError(w, http.StatusBadGateway, err.Error())
 			return
@@ -267,34 +268,18 @@ func (h *proxyHandler) proxyData(path string) http.HandlerFunc {
 	}
 }
 
-// proxyDataWithPathParam handles routes with a path parameter like {id}.
-// It appends the path value segment to the Rhizome data path.
+// proxyDataWithPathParam handles routes with one or more path segments after
+// the registered prefix (e.g. {id}, or {id}/context/{type}/{subjectId}). It
+// forwards the full path suffix verbatim and preserves the original HTTP method.
 func (h *proxyHandler) proxyDataWithPathParam(prefix, paramName string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		paramValue := r.PathValue(paramName)
 		// Build: prefix + "/" + paramValue + remaining suffix
 		fullPath := strings.TrimSuffix(r.URL.Path, "/")
 		// Strip the /api/v1/ prefix to get the data path
 		dataPath := strings.TrimPrefix(fullPath, "/api/v1/")
-		_ = prefix
-		_ = paramValue
 
 		userID, _ := UserIDFromContext(r.Context())
-		var (
-			body   io.ReadCloser
-			status int
-			err    error
-		)
-
-		if r.Method == http.MethodGet {
-			params := r.URL.Query()
-			body, status, err = h.rhizome.DataGet(dataPath, userID, params)
-		} else {
-			var payload any
-			json.NewDecoder(r.Body).Decode(&payload)
-			body, status, err = h.rhizome.DataPost(dataPath, userID, payload)
-		}
-
+		body, status, err := h.dispatchData(r, dataPath, userID)
 		if err != nil {
 			writeError(w, http.StatusBadGateway, err.Error())
 			return
