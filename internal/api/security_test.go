@@ -171,6 +171,16 @@ func TestAllProtectedRoutesReject401(t *testing.T) {
 	}
 }
 
+// TestRemovedTriageRecommendationsRouteStaysRemoved verifies Cambium does not
+// proxy a route Rhizome no longer exposes.
+func TestRemovedTriageRecommendationsRouteStaysRemoved(t *testing.T) {
+	srv := newTestServer(t)
+	resp := doRequest(t, srv, "GET", "/api/v1/triage/recommendations", "")
+	if resp.Code != http.StatusNotFound {
+		t.Errorf("GET /api/v1/triage/recommendations: got %d, want 404", resp.Code)
+	}
+}
+
 // TestPublicRoutesAllowUnauthenticated verifies that auth and health endpoints
 // do not require a token.
 func TestPublicRoutesAllowUnauthenticated(t *testing.T) {

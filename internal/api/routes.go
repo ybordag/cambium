@@ -187,7 +187,6 @@ func NewRouter(pool *pgxpool.Pool) http.Handler {
 
 	mux.Handle("POST /api/v1/triage/run", RequireAuth(http.HandlerFunc(ph.triggerTriage)))
 	mux.Handle("GET /api/v1/triage/latest", RequireAuth(http.HandlerFunc(ph.proxyData("triage/latest"))))
-	mux.Handle("GET /api/v1/triage/recommendations", RequireAuth(http.HandlerFunc(ph.proxyData("triage/recommendations"))))
 	mux.Handle("POST /api/v1/triage/monitor", RequireAuth(http.HandlerFunc(ph.proxyData("triage/monitor"))))
 
 	// -------------------------------------------------------------------------

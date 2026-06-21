@@ -394,7 +394,6 @@ Triage:
 ```
 POST   /api/v1/triage/run                      agent — LLM triage analysis
 GET    /api/v1/triage/latest                   data
-GET    /api/v1/triage/recommendations          data
 POST   /api/v1/triage/monitor                  data — trigger triage_job (monitor runner)
 ```
 
