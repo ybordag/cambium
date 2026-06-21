@@ -450,6 +450,87 @@
                 }
             }
         },
+        "/api/v1/notifications": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "notifications"
+                ],
+                "summary": "List notifications",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Only return notifications after this timestamp",
+                        "name": "since",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/api.ErrorResponse"
+                        }
+                    },
+                    "502": {
+                        "description": "Bad Gateway",
+                        "schema": {
+                            "$ref": "#/definitions/api.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/notifications/stream": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "text/event-stream"
+                ],
+                "tags": [
+                    "notifications"
+                ],
+                "summary": "Notification stream (SSE)",
+                "responses": {
+                    "200": {
+                        "description": "SSE stream of typed events (alert, interaction_pending, job_started/job_step/job_complete/job_failed, heartbeat)",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/api.ErrorResponse"
+                        }
+                    },
+                    "502": {
+                        "description": "Bad Gateway",
+                        "schema": {
+                            "$ref": "#/definitions/api.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/projects/{id}/tasks/generate": {
             "post": {
                 "security": [
@@ -532,7 +613,7 @@
                 "summary": "Create conversation thread",
                 "parameters": [
                     {
-                        "description": "Optional title and project link",
+                        "description": "Optional title, project link, and initial pinned context",
                         "name": "body",
                         "in": "body",
                         "schema": {
@@ -545,6 +626,12 @@
                         "description": "Botanical thread ID e.g. silver-fern-cascade",
                         "schema": {
                             "$ref": "#/definitions/api.ThreadIDResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.ErrorResponse"
                         }
                     },
                     "401": {
@@ -986,6 +1073,12 @@
         "api.CreateThreadRequest": {
             "type": "object",
             "properties": {
+                "initial_context": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/api.PinnedContextEntryInput"
+                    }
+                },
                 "project_id": {
                     "type": "string",
                     "example": "proj-uuid"
@@ -1059,6 +1152,19 @@
                 "status": {
                     "type": "string",
                     "example": "logged out"
+                }
+            }
+        },
+        "api.PinnedContextEntryInput": {
+            "type": "object",
+            "properties": {
+                "subject_id": {
+                    "type": "string",
+                    "example": "plant-uuid"
+                },
+                "subject_type": {
+                    "type": "string",
+                    "example": "plant"
                 }
             }
         },

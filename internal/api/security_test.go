@@ -37,6 +37,11 @@ func TestAllProtectedRoutesReject401(t *testing.T) {
 		{"GET", "/api/v1/threads/some-thread-id"},
 		{"GET", "/api/v1/threads/some-thread-id/messages"},
 		{"DELETE", "/api/v1/threads/some-thread-id"},
+		{"POST", "/api/v1/threads/some-thread-id/context"},
+		{"DELETE", "/api/v1/threads/some-thread-id/context/plant/some-plant-id"},
+
+		// Unified search
+		{"GET", "/api/v1/search"},
 
 		// Garden
 		{"GET", "/api/v1/garden/profile"},
@@ -55,6 +60,9 @@ func TestAllProtectedRoutesReject401(t *testing.T) {
 		{"GET", "/api/v1/garden/containers/some-container-id/care/state"},
 		{"GET", "/api/v1/garden/plants"},
 		{"POST", "/api/v1/garden/plants"},
+		{"POST", "/api/v1/garden/plants/batch"},
+		{"PATCH", "/api/v1/garden/plants/batch/remove"},
+		{"PATCH", "/api/v1/garden/plants/batch"},
 		{"GET", "/api/v1/garden/plants/some-plant-id"},
 		{"PATCH", "/api/v1/garden/plants/some-plant-id"},
 		{"DELETE", "/api/v1/garden/plants/some-plant-id"},
@@ -149,6 +157,10 @@ func TestAllProtectedRoutesReject401(t *testing.T) {
 		// Activity
 		{"GET", "/api/v1/activity"},
 		{"GET", "/api/v1/activity/stats"},
+
+		// Notifications
+		{"GET", "/api/v1/notifications/stream"},
+		{"GET", "/api/v1/notifications"},
 	}
 
 	for _, r := range routes {
@@ -159,6 +171,16 @@ func TestAllProtectedRoutesReject401(t *testing.T) {
 					r.method, r.path, resp.Code)
 			}
 		})
+	}
+}
+
+// TestRemovedTriageRecommendationsRouteStaysRemoved verifies Cambium does not
+// proxy a route Rhizome no longer exposes.
+func TestRemovedTriageRecommendationsRouteStaysRemoved(t *testing.T) {
+	srv := newTestServer(t)
+	resp := doRequest(t, srv, "GET", "/api/v1/triage/recommendations", "")
+	if resp.Code != http.StatusNotFound {
+		t.Errorf("GET /api/v1/triage/recommendations: got %d, want 404", resp.Code)
 	}
 }
 

@@ -326,6 +326,24 @@ Botanical name generator (31×41×36 ≈ 45,700 combinations). `POST/GET/DELETE/
 
 ~115 routes total. All new Rhizome endpoints wired: task CRUD, task series, task dependencies, bulk task update, garden detail endpoints, available resource filters, project beds/containers/expenses/shopping, calendar annotations, shopping list, activity stats. `TestAllProtectedRoutesReject401` security sweep expanded to cover all routes.
 
+### Group B + account ✓ complete
+
+Quick care recording (`POST .../care`) for plants/beds/containers. Incident PATCH/DELETE, manual treatment plan POST/PATCH/DELETE. `PATCH /auth/profile` and `POST /auth/password` as Cambium-native handlers (no Rhizome proxy).
+
+### Unified search + thread context ✓ complete (rhytidome, #16)
+
+`GET /api/v1/search` proxy; `POST/DELETE /api/v1/threads/{id}/context`; `initial_context` pass-through on thread creation with Rhizome 400-detail propagation. Fixed a pre-existing bug where `proxyData`/`proxyDataWithPathParam` collapsed every non-GET request to POST before forwarding, silently breaking PATCH/DELETE proxy routes in production — replaced with method-preserving `DataRequest`.
+
+### Notification SSE stream + sync endpoint ✓ complete (rhytidome, #19)
+
+`GET /api/v1/notifications/stream` proxies Rhizome's long-lived SSE notification stream; `GET /api/v1/notifications` proxies the sync snapshot. Required a new client method, `StreamData` (GET with query params, mirrors `openStream` but without a JSON body).
+
+### Static frontend serving ✓ complete (rhytidome, #21)
+
+`internal/api/static.go` serves the built Verdant Pages `dist/` (`STATIC_DIR` env var, default `./dist`) for any path not claimed by a more specific route; unknown paths fall back to `index.html` for client-side routing. Registered as the catch-all `"/"` pattern — Go's `ServeMux` always prefers the most specific match, verified by a router-level precedence test.
+
+`rhytidome` is not yet merged to `main` — kept open pending further fixes discovered while wiring #19/#21.
+
 ---
 
 ## Open questions
@@ -336,7 +354,7 @@ Botanical name generator (31×41×36 ≈ 45,700 combinations). `POST/GET/DELETE/
 
 3. **gRPC migration trigger** — SSE over HTTP is correct for the current browser → Cambium → Rhizome path. Switch if Fairlead needs service-to-service streaming.
 
-4. **Notification SSE event bus** — `GET /api/v1/notifications/stream` requires a shared event bus so background jobs on any pod can reach the SSE connection on any pod. Decision: Postgres `LISTEN/NOTIFY` (zero new infrastructure; psycopg3 async iterator). Per-user in-memory queues won't work across the two k3s pods.
+4. **Notification SSE event bus — resolved, with a known limitation.** Shipped (#19/#19-rhizome) using per-process in-memory queues (`agent/domain/notifications.py`), not the Postgres `LISTEN/NOTIFY` design originally proposed here. This means live SSE delivery only reaches a connection on the *same* Rhizome instance that handled the triggering job — it will not work across the two k3s pods once multi-instance deployment happens. The gap is partially covered today: anything that matters is also written to `MonitorAlert`/`InteractionRecord` and recovered via `GET /api/v1/notifications` on reconnect/poll, but the in-memory `active_jobs` snapshot (job-in-progress state) has no cross-instance or `since`-filtered recovery path. Revisit `LISTEN/NOTIFY` (or Redis pub/sub) before running more than one Rhizome instance.
 
 ---
 

@@ -122,3 +122,93 @@ func TestDataPost_SendsJSON(t *testing.T) {
 		t.Errorf("got status %d", status)
 	}
 }
+
+func TestDataDelete_SendsDeleteMethod(t *testing.T) {
+	_, client := fakeRhizome(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodDelete {
+			t.Errorf("expected DELETE, got %s", r.Method)
+		}
+		if r.URL.Query().Get("user_id") != "user-3" {
+			t.Errorf("user_id not forwarded: %s", r.URL.RawQuery)
+		}
+		if r.ContentLength > 0 {
+			t.Errorf("expected no body on DELETE, got content-length %d", r.ContentLength)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{"status":"deleted"}`))
+	})
+
+	body, status, err := client.DataDelete("threads/thread-1/context/plant/p1", "user-3")
+	if err != nil {
+		t.Fatalf("DataDelete: %v", err)
+	}
+	defer body.Close()
+	if status != http.StatusOK {
+		t.Errorf("got status %d", status)
+	}
+}
+
+func TestDataRequest_PatchSendsPatchMethod(t *testing.T) {
+	_, client := fakeRhizome(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPatch {
+			t.Errorf("expected PATCH, got %s", r.Method)
+		}
+		var body map[string]any
+		json.NewDecoder(r.Body).Decode(&body)
+		if body["status"] != "resolved" {
+			t.Errorf("body not forwarded: %v", body)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
+	})
+
+	body, status, err := client.DataRequest(http.MethodPatch, "incidents/inc-1", "user-1", nil, map[string]any{"status": "resolved"})
+	if err != nil {
+		t.Fatalf("DataRequest PATCH: %v", err)
+	}
+	defer body.Close()
+	if status != http.StatusOK {
+		t.Errorf("got status %d", status)
+	}
+}
+
+func TestStreamData_GETForwardsUserIDAndParams(t *testing.T) {
+	ssePayload := "data: {\"type\":\"heartbeat\"}\n\n"
+
+	_, client := fakeRhizome(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			t.Errorf("expected GET, got %s", r.Method)
+		}
+		if r.URL.Path != "/internal/data/notifications/stream" {
+			t.Errorf("unexpected path: %s", r.URL.Path)
+		}
+		if r.URL.Query().Get("user_id") != "user-7" {
+			t.Errorf("user_id not forwarded: %s", r.URL.RawQuery)
+		}
+		w.Header().Set("Content-Type", "text/event-stream")
+		w.Write([]byte(ssePayload))
+	})
+
+	body, err := client.StreamData("notifications/stream", "user-7", nil)
+	if err != nil {
+		t.Fatalf("StreamData: %v", err)
+	}
+	defer body.Close()
+
+	got, _ := io.ReadAll(body)
+	if string(got) != ssePayload {
+		t.Errorf("got SSE body %q, want %q", got, ssePayload)
+	}
+}
+
+func TestStreamData_NonOKReturnsError(t *testing.T) {
+	_, client := fakeRhizome(t, func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusBadGateway)
+		w.Write([]byte("upstream down"))
+	})
+
+	_, err := client.StreamData("notifications/stream", "user-1", nil)
+	if err == nil {
+		t.Error("expected error for non-200, got nil")
+	}
+}

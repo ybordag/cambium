@@ -6,15 +6,15 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/ybordag/cambium/internal/auth"
 	"github.com/ybordag/cambium/internal/db"
 	"github.com/ybordag/cambium/internal/rhizome"
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 // proxyHandler holds dependencies for all proxy routes.
 type proxyHandler struct {
-	pool   *pgxpool.Pool
+	pool    *pgxpool.Pool
 	rhizome *rhizome.Client
 }
 
@@ -231,30 +231,75 @@ func (h *proxyHandler) chatResumeStream(w http.ResponseWriter, r *http.Request) 
 }
 
 // -------------------------------------------------------------------------
+// Notifications — long-lived SSE stream (GET, not POST like chat)
+// -------------------------------------------------------------------------
+
+// notificationList proxies GET /internal/data/notifications as a synchronous
+// notification snapshot. It preserves query params such as since.
+//
+//	@Summary	List notifications
+//	@Tags		notifications
+//	@Produce	json
+//	@Security	BearerAuth
+//	@Param		since	query		string	false	"Only return notifications after this timestamp"
+//	@Success	200		{object}	map[string]any
+//	@Failure	401		{object}	ErrorResponse
+//	@Failure	502		{object}	ErrorResponse
+//	@Router		/api/v1/notifications [get]
+func (h *proxyHandler) notificationList(w http.ResponseWriter, r *http.Request) {
+	h.proxyData("notifications")(w, r)
+}
+
+// notificationStream proxies GET /internal/data/notifications/stream as a
+// long-lived SSE connection. Unlike the chat stream endpoints, this is a GET
+// with no request body — the verified user_id is the only required param.
+// The frontend opens this once on app mount and keeps it open for the session.
+//
+//	@Summary	Notification stream (SSE)
+//	@Tags		notifications
+//	@Produce	text/event-stream
+//	@Security	BearerAuth
+//	@Success	200	{string}	string	"SSE stream of typed events (alert, interaction_pending, job_started/job_step/job_complete/job_failed, heartbeat)"
+//	@Failure	401	{object}	ErrorResponse
+//	@Failure	502	{object}	ErrorResponse
+//	@Router		/api/v1/notifications/stream [get]
+func (h *proxyHandler) notificationStream(w http.ResponseWriter, r *http.Request) {
+	userID, _ := UserIDFromContext(r.Context())
+	stream, err := h.rhizome.StreamData("notifications/stream", userID, nil)
+	if err != nil {
+		writeError(w, http.StatusBadGateway, "rhizome stream unavailable: "+err.Error())
+		return
+	}
+	defer stream.Close()
+	proxySSE(w, stream)
+}
+
+// -------------------------------------------------------------------------
 // Data proxy — CRUD pass-through
 // -------------------------------------------------------------------------
 
-// proxyData proxies a request to Rhizome's /internal/data/{path} endpoint.
-// GET requests forward query params; POST requests forward the body.
+// dispatchData calls the right Rhizome client method for the request's HTTP
+// method: GET forwards query params, DELETE sends no body, everything else
+// (POST/PATCH/PUT) decodes and forwards the JSON body under its own verb.
+func (h *proxyHandler) dispatchData(r *http.Request, dataPath, userID string) (io.ReadCloser, int, error) {
+	switch r.Method {
+	case http.MethodGet:
+		return h.rhizome.DataGet(dataPath, userID, r.URL.Query())
+	case http.MethodDelete:
+		return h.rhizome.DataDelete(dataPath, userID)
+	default:
+		var payload any
+		json.NewDecoder(r.Body).Decode(&payload)
+		return h.rhizome.DataRequest(r.Method, dataPath, userID, nil, payload)
+	}
+}
+
+// proxyData proxies a request to Rhizome's /internal/data/{path} endpoint,
+// preserving the original HTTP method (GET/POST/PATCH/DELETE).
 func (h *proxyHandler) proxyData(path string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		userID, _ := UserIDFromContext(r.Context())
-
-		var (
-			body   io.ReadCloser
-			status int
-			err    error
-		)
-
-		if r.Method == http.MethodGet {
-			params := r.URL.Query()
-			body, status, err = h.rhizome.DataGet(path, userID, params)
-		} else {
-			var payload any
-			json.NewDecoder(r.Body).Decode(&payload)
-			body, status, err = h.rhizome.DataPost(path, userID, payload)
-		}
-
+		body, status, err := h.dispatchData(r, path, userID)
 		if err != nil {
 			writeError(w, http.StatusBadGateway, err.Error())
 			return
@@ -267,34 +312,18 @@ func (h *proxyHandler) proxyData(path string) http.HandlerFunc {
 	}
 }
 
-// proxyDataWithPathParam handles routes with a path parameter like {id}.
-// It appends the path value segment to the Rhizome data path.
+// proxyDataWithPathParam handles routes with one or more path segments after
+// the registered prefix (e.g. {id}, or {id}/context/{type}/{subjectId}). It
+// forwards the full path suffix verbatim and preserves the original HTTP method.
 func (h *proxyHandler) proxyDataWithPathParam(prefix, paramName string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		paramValue := r.PathValue(paramName)
 		// Build: prefix + "/" + paramValue + remaining suffix
 		fullPath := strings.TrimSuffix(r.URL.Path, "/")
 		// Strip the /api/v1/ prefix to get the data path
 		dataPath := strings.TrimPrefix(fullPath, "/api/v1/")
-		_ = prefix
-		_ = paramValue
 
 		userID, _ := UserIDFromContext(r.Context())
-		var (
-			body   io.ReadCloser
-			status int
-			err    error
-		)
-
-		if r.Method == http.MethodGet {
-			params := r.URL.Query()
-			body, status, err = h.rhizome.DataGet(dataPath, userID, params)
-		} else {
-			var payload any
-			json.NewDecoder(r.Body).Decode(&payload)
-			body, status, err = h.rhizome.DataPost(dataPath, userID, payload)
-		}
-
+		body, status, err := h.dispatchData(r, dataPath, userID)
 		if err != nil {
 			writeError(w, http.StatusBadGateway, err.Error())
 			return

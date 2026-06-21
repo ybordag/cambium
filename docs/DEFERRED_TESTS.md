@@ -72,3 +72,27 @@ Tests consciously deferred with rationale and re-enable criteria.
 **What:** When Rhizome is unreachable, authenticated proxy requests should return 502 with a structured error body, not panic or hang.
 **Why deferred:** Covered structurally by `TestRunAgent_RhizomeError` in `client_test.go` (client returns error on non-200). The handler wraps the error into `writeError(w, 502, ...)`. A targeted test would spin up a fake Rhizome that returns 503.
 **Re-enable when:** Adding integration tests with a configurable fake Rhizome server.
+
+---
+
+## Search and thread context (#16)
+
+### `rhizomeErrorDetail` fallback path
+**What:** `createThread`'s 400 handling extracts Rhizome's `{"detail": "..."}` message via `rhizomeErrorDetail`. The fallback string (`"rhizome rejected the request"`) fires when the body has no `detail` field or fails to decode — that branch is untested.
+**Why deferred:** Low risk — Rhizome's FastAPI `HTTPException` always includes `detail`; this only guards against a malformed or empty body.
+**Re-enable when:** Touching `rhizomeErrorDetail` again, or doing a hardening pass on the proxy error paths.
+
+### Thread-ID-collision retry with `initial_context`
+**What:** `createThread` retries once with a new botanical ID when Rhizome reports `created=false` (rare hash collision). Whether the retry payload correctly resends `initial_context` is untested — only collision-free creation paths are covered.
+**Why deferred:** The retry payload is built once and reused (`payload["thread_id"] = threadID`), so the existing structure should carry `initial_context` through correctly by construction. Exercising the actual collision branch requires forcing two identical generated IDs, which isn't easily triggerable without mocking `generateThreadID`.
+**Re-enable when:** `generateThreadID` gets a test seam (e.g. injectable RNG), or collisions become observable in practice.
+
+### `proxyData` (literal-path routes) under PATCH
+**What:** Routes like `PATCH /api/v1/garden/profile` use the bare `proxyData` helper rather than `proxyDataWithPathParam`. The PATCH-forwarding regression test (`TestDispatchData_PATCHForwardsAsPatchNotPost`) only exercises the path-param variant.
+**Why deferred:** Both helpers call the same shared `dispatchData`, so the method-dispatch logic under test is identical; the risk of `proxyData` specifically regressing without `proxyDataWithPathParam` also regressing is low.
+**Re-enable when:** `proxyData` and `proxyDataWithPathParam` diverge in implementation (e.g. one gets path-specific logic the other doesn't).
+
+### Transport failure for `/search` and `/threads/{id}/context`
+**What:** When Rhizome is unreachable, `GET /api/v1/search`, `POST /api/v1/threads/{id}/context`, and the DELETE variant should return 502, consistent with every other proxy route.
+**Why deferred:** Same underlying mechanism as the existing "502 handling under Rhizome failure" deferral above — `dispatchData` surfaces the client error through `writeError(w, 502, ...)` for any route. Not re-verified per-route.
+**Re-enable when:** Adding a dedicated "Rhizome down" smoke test that sweeps all proxy routes in one pass, rather than one per route.

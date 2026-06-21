@@ -114,6 +114,12 @@ func NewRouter(pool *pgxpool.Pool) http.Handler {
 	mux.Handle("GET /api/v1/garden/locations/{location}", RequireAuth(ph.proxyDataWithPathParam("garden/locations", "location")))
 
 	// -------------------------------------------------------------------------
+	// Unified search — across all entity types
+	// -------------------------------------------------------------------------
+
+	mux.Handle("GET /api/v1/search", RequireAuth(http.HandlerFunc(ph.proxyData("search"))))
+
+	// -------------------------------------------------------------------------
 	// Projects
 	// -------------------------------------------------------------------------
 
@@ -181,7 +187,6 @@ func NewRouter(pool *pgxpool.Pool) http.Handler {
 
 	mux.Handle("POST /api/v1/triage/run", RequireAuth(http.HandlerFunc(ph.triggerTriage)))
 	mux.Handle("GET /api/v1/triage/latest", RequireAuth(http.HandlerFunc(ph.proxyData("triage/latest"))))
-	mux.Handle("GET /api/v1/triage/recommendations", RequireAuth(http.HandlerFunc(ph.proxyData("triage/recommendations"))))
 	mux.Handle("POST /api/v1/triage/monitor", RequireAuth(http.HandlerFunc(ph.proxyData("triage/monitor"))))
 
 	// -------------------------------------------------------------------------
@@ -223,6 +228,13 @@ func NewRouter(pool *pgxpool.Pool) http.Handler {
 	mux.Handle("POST /api/v1/interactions/{id}/resolve", RequireAuth(ph.proxyDataWithPathParam("interactions", "id")))
 
 	// -------------------------------------------------------------------------
+	// Notifications
+	// -------------------------------------------------------------------------
+
+	mux.Handle("GET /api/v1/notifications/stream", RequireAuth(http.HandlerFunc(ph.notificationStream)))
+	mux.Handle("GET /api/v1/notifications", RequireAuth(http.HandlerFunc(ph.notificationList)))
+
+	// -------------------------------------------------------------------------
 	// Alerts + monitor runs
 	// -------------------------------------------------------------------------
 
@@ -241,6 +253,8 @@ func NewRouter(pool *pgxpool.Pool) http.Handler {
 	mux.Handle("GET /api/v1/threads/{id}/messages", RequireAuth(ph.proxyDataWithPathParam("threads", "id")))
 	mux.Handle("GET /api/v1/threads/{id}", RequireAuth(ph.proxyDataWithPathParam("threads", "id")))
 	mux.Handle("DELETE /api/v1/threads/{id}", RequireAuth(ph.proxyDataWithPathParam("threads", "id")))
+	mux.Handle("POST /api/v1/threads/{id}/context", RequireAuth(ph.proxyDataWithPathParam("threads", "id")))
+	mux.Handle("DELETE /api/v1/threads/{id}/context/{subjectType}/{subjectId}", RequireAuth(ph.proxyDataWithPathParam("threads", "id")))
 
 	// -------------------------------------------------------------------------
 	// Calendar
@@ -280,6 +294,12 @@ func NewRouter(pool *pgxpool.Pool) http.Handler {
 	// -------------------------------------------------------------------------
 
 	mux.Handle("GET /docs/", httpSwagger.WrapHandler)
+
+	// -------------------------------------------------------------------------
+	// Verdant Pages — static frontend (catch-all, must stay last)
+	// -------------------------------------------------------------------------
+
+	mux.Handle("/", staticFileHandler())
 
 	return mux
 }

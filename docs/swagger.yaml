@@ -20,6 +20,10 @@ definitions:
     type: object
   api.CreateThreadRequest:
     properties:
+      initial_context:
+        items:
+          $ref: '#/definitions/api.PinnedContextEntryInput'
+        type: array
       project_id:
         example: proj-uuid
         type: string
@@ -70,6 +74,15 @@ definitions:
     properties:
       status:
         example: logged out
+        type: string
+    type: object
+  api.PinnedContextEntryInput:
+    properties:
+      subject_id:
+        example: plant-uuid
+        type: string
+      subject_type:
+        example: plant
         type: string
     type: object
   api.RegisterRequest:
@@ -414,6 +427,57 @@ paths:
       summary: Draft treatment plan (AI)
       tags:
       - incidents
+  /api/v1/notifications:
+    get:
+      parameters:
+      - description: Only return notifications after this timestamp
+        in: query
+        name: since
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "502":
+          description: Bad Gateway
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List notifications
+      tags:
+      - notifications
+  /api/v1/notifications/stream:
+    get:
+      produces:
+      - text/event-stream
+      responses:
+        "200":
+          description: SSE stream of typed events (alert, interaction_pending, job_started/job_step/job_complete/job_failed,
+            heartbeat)
+          schema:
+            type: string
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "502":
+          description: Bad Gateway
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Notification stream (SSE)
+      tags:
+      - notifications
   /api/v1/projects/{id}/tasks/generate:
     post:
       consumes:
@@ -459,7 +523,7 @@ paths:
       consumes:
       - application/json
       parameters:
-      - description: Optional title and project link
+      - description: Optional title, project link, and initial pinned context
         in: body
         name: body
         schema:
@@ -471,6 +535,10 @@ paths:
           description: Botanical thread ID e.g. silver-fern-cascade
           schema:
             $ref: '#/definitions/api.ThreadIDResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
         "401":
           description: Unauthorized
           schema:
