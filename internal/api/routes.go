@@ -233,7 +233,7 @@ func NewRouter(pool *pgxpool.Pool) http.Handler {
 	// -------------------------------------------------------------------------
 
 	mux.Handle("GET /api/v1/notifications/stream", RequireAuth(http.HandlerFunc(ph.notificationStream)))
-	mux.Handle("GET /api/v1/notifications", RequireAuth(http.HandlerFunc(ph.proxyData("notifications"))))
+	mux.Handle("GET /api/v1/notifications", RequireAuth(http.HandlerFunc(ph.notificationList)))
 
 	// -------------------------------------------------------------------------
 	// Alerts + monitor runs

@@ -427,6 +427,34 @@ paths:
       summary: Draft treatment plan (AI)
       tags:
       - incidents
+  /api/v1/notifications:
+    get:
+      parameters:
+      - description: Only return notifications after this timestamp
+        in: query
+        name: since
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "502":
+          description: Bad Gateway
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List notifications
+      tags:
+      - notifications
   /api/v1/notifications/stream:
     get:
       produces:

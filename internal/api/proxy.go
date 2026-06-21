@@ -234,6 +234,22 @@ func (h *proxyHandler) chatResumeStream(w http.ResponseWriter, r *http.Request) 
 // Notifications — long-lived SSE stream (GET, not POST like chat)
 // -------------------------------------------------------------------------
 
+// notificationList proxies GET /internal/data/notifications as a synchronous
+// notification snapshot. It preserves query params such as since.
+//
+//	@Summary	List notifications
+//	@Tags		notifications
+//	@Produce	json
+//	@Security	BearerAuth
+//	@Param		since	query		string	false	"Only return notifications after this timestamp"
+//	@Success	200		{object}	map[string]any
+//	@Failure	401		{object}	ErrorResponse
+//	@Failure	502		{object}	ErrorResponse
+//	@Router		/api/v1/notifications [get]
+func (h *proxyHandler) notificationList(w http.ResponseWriter, r *http.Request) {
+	h.proxyData("notifications")(w, r)
+}
+
 // notificationStream proxies GET /internal/data/notifications/stream as a
 // long-lived SSE connection. Unlike the chat stream endpoints, this is a GET
 // with no request body — the verified user_id is the only required param.
