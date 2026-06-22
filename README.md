@@ -19,6 +19,10 @@ between the inner wood and outer bark of a plant — exactly what a gateway does
   CRUD operations directly to SQLAlchemy
 - **SSE streaming** — `POST /api/v1/chat/stream` proxies LLM token streams to
   the browser in real time
+- **Notifications and alerts** — proxies live notification SSE and durable
+  alert/monitor snapshots from Rhizome
+- **Verdant serving** — serves the built React app from `STATIC_DIR` with SPA
+  fallback
 
 ## System topology
 
@@ -60,6 +64,8 @@ Regenerate the spec after handler changes:
 - [Architecture overview](docs/architecture/overview.md)
 - [Auth flow](docs/architecture/auth-flow.md)
 - [Request lifecycle](docs/architecture/request-lifecycle.md)
+- [Code organization](docs/development/code-organization.md)
+- [Testing guide](docs/development/testing.md)
 - [Roadmap](docs/roadmap/overview.md)
 - [Full design document](docs/design.md)
 

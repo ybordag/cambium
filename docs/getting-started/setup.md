@@ -103,6 +103,10 @@ go run ./cmd/server/
 
 On first run, Cambium creates the `cambium.users` and `cambium.refresh_tokens` tables automatically.
 
+If `STATIC_DIR` points to a built Verdant app, Cambium also serves that app at
+`http://localhost:8080/`. API, auth, health, and docs routes continue to take
+precedence over the SPA fallback.
+
 ---
 
 ## 5. Verify
@@ -132,3 +136,9 @@ go test ./...
 ```
 
 API integration tests require a running Postgres instance (uses `DATABASE_URL`). Auth and crypto unit tests run without any external dependencies.
+
+For route or handler changes, also regenerate and commit Swagger output:
+
+```bash
+~/go/bin/swag init -g cmd/server/main.go -o docs
+```

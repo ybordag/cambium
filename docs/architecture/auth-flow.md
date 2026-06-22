@@ -71,7 +71,9 @@ user's next refresh fails, signalling the breach.
 
 ## JWT middleware
 
-Every `/api/v1` route runs `RequireAuth` before its handler:
+Every protected route runs `RequireAuth` before its handler. This includes
+nearly all `/api/v1` routes plus protected account routes such as
+`/auth/session`, `/auth/profile`, and `/auth/password`.
 
 ```
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
@@ -86,6 +88,23 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
 If any step fails, the request is rejected with `401 Unauthorized` before any
 handler logic runs.
+
+---
+
+## Account and Provider Key Routes
+
+Cambium owns account settings and provider-key storage directly; these do not
+proxy to Rhizome.
+
+- `GET /auth/session` returns the authenticated user profile.
+- `PATCH /auth/profile` updates preferred provider and/or preferred model.
+- `POST /auth/password` changes the password after verifying the current one.
+- `PUT /api/v1/auth/keys` stores an encrypted provider API key.
+- `GET /api/v1/auth/keys` returns provider booleans only.
+- `DELETE /api/v1/auth/keys/{provider}` removes a stored key.
+
+Provider keys are decrypted only when Cambium forwards an AI request to
+Rhizome. CRUD/data routes do not need the plaintext key.
 
 ---
 

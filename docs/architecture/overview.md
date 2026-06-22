@@ -55,6 +55,9 @@ HTTP handlers organized by concern:
 | `keys.go` | Provider key set/list/delete handlers |
 | `proxy.go` | Generic data proxy — `proxyData`, `proxyDataWithPathParam`, `proxySSE` |
 | `triggers.go` | AI-trigger handlers — triage, weather draft, treatment draft, task generation |
+| `threads.go` | Cambium-native thread creation and botanical name generation |
+| `threadnames.go` | Botanical thread name vocabulary/generator |
+| `static.go` | Serves built Verdant assets from `STATIC_DIR` with SPA fallback |
 | `health.go` | `GET /health` |
 | `respond.go` | `writeJSON`, `writeError` helpers |
 
@@ -91,6 +94,8 @@ HTTP client for Rhizome's internal API:
 | `StreamResume` | `POST /internal/agent/resume/stream` |
 | `DataGet` | `GET /internal/data/{path}?user_id=...` |
 | `DataPost` | `POST /internal/data/{path}?user_id=...` |
+| `DataRequest` | Method-preserving proxy for `GET`, `POST`, `PATCH`, and `DELETE` data routes |
+| `StreamData` | `GET /internal/data/{path}` SSE stream, used by notifications |
 
 ---
 
@@ -117,8 +122,30 @@ Cambium
 - Project and brief management
 - Activity history
 - Alert reads and dismissals
+- Notifications and monitor run snapshots
+- Unified search and thread pinned context
+- Calendar annotations and shopping lists
 
 This split keeps LLM costs low — a `GET /api/v1/tasks/daily` costs zero tokens.
+
+## Public API Surface
+
+Cambium exposes the public `/api/v1` contract consumed by Verdant. The current
+surface includes:
+
+- chat and chat resume, streaming and non-streaming
+- provider key management
+- garden profile, beds, containers, plants, batches, search, and locations
+- projects, briefs, proposals, project tasks, project resources, expenses, and
+  shopping
+- task CRUD, lifecycle actions, dependencies, series, daily/due/blocked lists,
+  and materialization triggers
+- triage, weather, incidents, treatment plans, interactions, alerts, monitor
+  runs, notifications, activity, calendar annotations, and unified search
+- thread creation, history, delete, and pinned context management
+- media stubs, currently returning `501 Not Implemented`
+
+The generated Swagger UI at `/docs/index.html` is the exhaustive endpoint list.
 
 ---
 
@@ -155,3 +182,12 @@ On every AI request:
 ```
 
 Keys are never returned to the client. `GET /api/v1/auth/keys` returns only booleans.
+
+---
+
+## Static Frontend Serving
+
+Cambium can serve the built Verdant Pages app directly. `STATIC_DIR` points at
+the frontend `dist/` directory and defaults to `./dist`. Any path not claimed by
+`/api/v1/*`, `/auth/*`, `/health`, or `/docs/*` falls back to `index.html`, so
+client-side routing works after a browser refresh.

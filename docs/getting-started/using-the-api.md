@@ -133,7 +133,7 @@ curl http://localhost:8080/api/v1/threads/silver-fern-cascade/messages \
   -H "Authorization: Bearer <access_token>"
 ```
 
-## 6. Chat with the agent
+## 5. Chat with the agent
 
 Every chat request requires the `thread_id` from step 4.
 
@@ -181,7 +181,7 @@ curl -X POST "http://localhost:8080/api/v1/chat/resume?thread_id=my-thread-1" \
 
 ---
 
-## 7. Read garden data
+## 6. Read garden data
 
 Once the agent has populated your garden (via chat), all domain data is available directly:
 
@@ -200,6 +200,26 @@ curl "http://localhost:8080/api/v1/alerts" \
 
 # Project progress
 curl "http://localhost:8080/api/v1/projects/<project-id>/progress" \
+  -H "Authorization: Bearer <access_token>"
+
+# Unified entity search
+curl "http://localhost:8080/api/v1/search?q=tomato&types=plant,task" \
+  -H "Authorization: Bearer <access_token>"
+```
+
+---
+
+## 7. Listen for notifications
+
+Cambium exposes both a live SSE stream and a catch-up snapshot. The durable
+source of truth is still Rhizome's `MonitorAlert` and `InteractionRecord`
+tables; the live stream is best-effort.
+
+```bash
+curl -N "http://localhost:8080/api/v1/notifications/stream" \
+  -H "Authorization: Bearer <access_token>"
+
+curl "http://localhost:8080/api/v1/notifications" \
   -H "Authorization: Bearer <access_token>"
 ```
 

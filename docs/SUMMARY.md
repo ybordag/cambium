@@ -15,3 +15,7 @@
 ## Design Reference
 - [Full Design Document](design.md) — architecture decisions, database DDL, build order, open questions
 - [Deferred Tests](DEFERRED_TESTS.md) — consciously skipped test areas with rationale
+
+## Development
+- [Code Organization](development/code-organization.md) — directory guide, module responsibilities, change rules
+- [Testing Guide](development/testing.md) — test layers, route testing rules, fake Rhizome pattern

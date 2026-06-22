@@ -24,12 +24,12 @@ Cambium: RequireAuth middleware
         ▼
 Cambium: proxyData("tasks/daily") handler
   6. UserIDFromContext(r.Context()) → "abc-123"
-  7. rhizome.DataGet("tasks/daily", "abc-123", queryParams)
+  7. rhizome.DataRequest(GET, "tasks/daily", "abc-123", queryParams, nil)
         │
         ▼
 Rhizome: GET /internal/data/tasks/daily?user_id=abc-123
   8. current_user_id.set("abc-123")
-  9. get_daily_priority_tasks.invoke({limit: 10})
+  9. structured route handler builds `TaskSummaryView[]`
  10. SQLAlchemy query scoped to user_id=abc-123
         │
         ◀ JSON response
@@ -40,6 +40,10 @@ Cambium: io.Copy(w, rhizomeBody)
 ```
 
 Total latency: one DB query in Rhizome, no LLM call.
+
+The data proxy preserves the original HTTP method. `PATCH`, `DELETE`, and
+non-agent `POST` requests are forwarded to the matching Rhizome internal data
+route instead of being collapsed into one method.
 
 ---
 
@@ -118,6 +122,39 @@ Cambium: triggerTriage handler
 ```
 
 The agent receives a natural-language instruction rather than a user-typed message. The response goes through the same Rhizome graph and is returned as a complete JSON response (non-streaming).
+
+---
+
+## Notification stream
+
+Example: `GET /api/v1/notifications/stream`
+
+```
+Verdant
+  GET /api/v1/notifications/stream
+  Authorization: Bearer eyJ...
+        │
+        ▼
+Cambium: RequireAuth → user_id = "abc-123"
+        │
+        ▼
+Cambium: notificationStream handler
+  1. forwards query params such as since
+  2. rhizome.StreamData("notifications/stream", user_id, queryParams)
+        │
+        ▼
+Rhizome: GET /internal/data/notifications/stream?user_id=abc-123
+        │
+        ◀ long-lived SSE stream
+        │
+Cambium: proxySSE(w, stream)
+        │
+        ◀ events arrive in Verdant
+```
+
+Live notification delivery is best-effort. Durable recovery comes from
+`GET /api/v1/notifications`, `GET /api/v1/alerts`, and pending interaction
+routes.
 
 ---
 

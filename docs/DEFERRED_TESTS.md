@@ -14,7 +14,7 @@ Tests consciously deferred with rationale and re-enable criteria.
 ### Refresh token reuse (rotation enforcement)
 **What:** Use a refresh token once (gets rotated), then attempt to use the original token again — should return 401.
 **Why deferred:** The logout test proves revocation works; the rotation path is exercised but the double-use case specifically is not.
-**Re-enable when:** Adding security hardening tests before Phase 3 ships.
+**Re-enable when:** Adding security hardening tests before public or multi-user production exposure.
 
 ### Refresh token expiry
 **What:** A refresh token past its `expires_at` should be rejected even if not revoked.
@@ -47,7 +47,7 @@ Tests consciously deferred with rationale and re-enable criteria.
 ### Rate limiting on auth endpoints
 **What:** More than N failed login attempts within a time window should return 429.
 **Why deferred:** Rate limiting is listed as an open question in `docs/design.md` — not yet implemented.
-**Re-enable when:** Rate limiting is added (before Phase 2 ships to production).
+**Re-enable when:** Rate limiting is added before public exposure.
 
 ### Key encryption round-trip through DB
 **What:** Store an encrypted key via `PUT /api/v1/auth/keys`, then verify the raw value in the DB is not the plaintext and can be decrypted back to the original.

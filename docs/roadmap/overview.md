@@ -2,7 +2,9 @@
 
 ## Current status
 
-Phases 0–5 are complete, along with the frontend API pass, Group B, and three follow-on feature branches (#16, #19, #21) implemented on `rhytidome` (not yet merged to `main`).
+Phases 0–5 are complete, along with the frontend API pass, Group B, and the
+follow-on fixes for unified search/thread context, notifications, and static
+Verdant serving. The current `main` branch contains the merged API surface.
 
 | Phase | Status | What it delivered |
 |---|---|---|
@@ -10,15 +12,13 @@ Phases 0–5 are complete, along with the frontend API pass, Group B, and three 
 | Phase 1 — Go skeleton | ✓ done | `go mod init`, `/health`, pgxpool, `cambium` schema migrations |
 | Phase 2 — Auth + key management | ✓ done | Register/login/refresh/logout, JWT middleware, AES-256-GCM provider key storage |
 | Phase 3 — Rhizome proxy | ✓ done | Rhizome HTTP client, SSE streaming, provider key injection, partial route wiring |
-| Phase 4 — Full API surface | ✓ done | All ~95 endpoints wired; AI-trigger handlers; media stubs; comprehensive docs |
+| Phase 4 — Full API surface | ✓ done | Core API surface wired; AI-trigger handlers; media stubs; comprehensive docs |
 | Phase 5 — Thread management | ✓ done | Botanical name generator; `POST/GET/DELETE /api/v1/threads`; full conversation history |
-| Frontend API pass | ✓ done | ~115 routes total: task CRUD/series/dependencies, garden detail, calendar, shopping, activity stats |
+| Frontend API pass | ✓ done | Expanded route surface for task CRUD/series/dependencies, garden detail, calendar, shopping, activity stats |
 | Group B + account | ✓ done | Quick care recording, incident PATCH/DELETE, manual treatment plans, native profile/password endpoints |
-| #16 — Unified search + thread context | ✓ done (`rhytidome`) | `GET /api/v1/search`; thread pinned context; fixed a method-collapsing bug in the data proxy |
-| #19 — Notification SSE + sync | ✓ done (`rhytidome`) | `GET /api/v1/notifications/stream`, `GET /api/v1/notifications` |
-| #21 — Static frontend serving | ✓ done (`rhytidome`) | Serves built Verdant Pages `dist/`, SPA fallback to `index.html` |
-
-`rhytidome` is intentionally not yet merged — kept open in case more fixes surface while wiring #19/#21 end-to-end with the frontend.
+| #16 — Unified search + thread context | ✓ done | `GET /api/v1/search`; thread pinned context; fixed a method-collapsing bug in the data proxy |
+| #19 — Notification SSE + sync | ✓ done | `GET /api/v1/notifications/stream`, `GET /api/v1/notifications` |
+| #21 — Static frontend serving | ✓ done | Serves built Verdant Pages `dist/`, SPA fallback to `index.html` |
 
 ---
 
@@ -65,8 +65,8 @@ The following are Rhizome-side features that Cambium will proxy automatically on
 |---|---|
 | Google Search grounding | No new endpoints — agent uses it internally during planning |
 | RAG / knowledge base | No new endpoints — agent uses it internally |
-| Full-text search | `GET /api/v1/garden/search` already wired (returns results when implemented) |
-| iNaturalist pest monitoring | `POST /api/v1/alerts` — new alert type `pest` |
+| Unified/full-text search | `GET /api/v1/search` is wired; richer Rhizome full-text ranking can improve results behind the same route |
+| iNaturalist pest monitoring | no new Cambium route expected; pest alerts should appear through existing alert/notification routes |
 | Visual garden understanding | `POST /api/v1/media` — currently 501, implements when Epic 2 ships |
 
 ---

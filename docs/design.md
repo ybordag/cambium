@@ -1,7 +1,9 @@
 # Cambium — Design Document
 
-**Status:** Initial design — updated with provider key storage and Postgres decisions  
-**Version:** 0.2
+**Status:** Historical design reference — current implementation is documented
+in [docs/architecture](architecture/overview.md) and
+[docs/roadmap](roadmap/overview.md)
+**Version:** 0.3
 
 ---
 
@@ -38,8 +40,9 @@ Postgres
 ```
 
 Cambium and Rhizome are **separate processes**. Cambium calls Rhizome over a
-well-defined internal HTTP interface (gRPC when streaming is needed). They share
-one Postgres instance under separate schemas.
+well-defined internal HTTP interface. Streaming uses SSE today; gRPC remains a
+possible future service-to-service option if the protocol needs bidirectional
+streaming. They share one Postgres instance under separate schemas.
 
 ---
 
@@ -51,7 +54,7 @@ Go. Reasons:
 - Strong standard library for JWT, bcrypt, AES crypto — minimal external dependencies
 - Single static binary — fits the Spark hardware deployment model
 - Good portfolio signal for infrastructure/backend roles
-- Fairlead (inference router) may also be Go
+- Fairlead is the separate Rust inference-router track
 
 ---
 
@@ -230,7 +233,9 @@ This split matters for performance and cost. A `GET /api/v1/tasks` request from
 Verdant should not spin up a full LangGraph agent turn — it should be a single
 SQL query. Only operations that require AI reasoning pay the LLM cost.
 
-Rhizome's data endpoint is built during **Phase 3** alongside the agent endpoint.
+Rhizome's agent and data endpoints are implemented. Cambium proxies AI-heavy
+operations to the agent surface and structured reads/status mutations to the
+data surface.
 
 ### Rhizome instance topology
 
@@ -316,7 +321,8 @@ HTTP client (`DataGet`, `DataPost`, `RunAgent`, `StreamAgent`). SSE streaming pr
 
 ### Phase 4 — Full API surface ✓ complete
 
-~95 routes wired. AI-trigger handlers (triage, weather, treatment plans, task generation). Media stubs. Full Swagger docs. (commit 6a916a6)
+Core route surface wired. AI-trigger handlers (triage, weather, treatment
+plans, task generation). Media stubs. Full Swagger docs. (commit 6a916a6)
 
 ### Phase 5 — Thread management ✓ complete
 
@@ -324,25 +330,29 @@ Botanical name generator (31×41×36 ≈ 45,700 combinations). `POST/GET/DELETE/
 
 ### Frontend API pass ✓ complete
 
-~115 routes total. All new Rhizome endpoints wired: task CRUD, task series, task dependencies, bulk task update, garden detail endpoints, available resource filters, project beds/containers/expenses/shopping, calendar annotations, shopping list, activity stats. `TestAllProtectedRoutesReject401` security sweep expanded to cover all routes.
+Expanded route surface. All new Rhizome endpoints wired: task CRUD, task series,
+task dependencies, bulk task update, garden detail endpoints, available
+resource filters, project beds/containers/expenses/shopping, calendar
+annotations, shopping list, activity stats. `TestAllProtectedRoutesReject401`
+security sweep expanded to cover protected routes.
 
 ### Group B + account ✓ complete
 
 Quick care recording (`POST .../care`) for plants/beds/containers. Incident PATCH/DELETE, manual treatment plan POST/PATCH/DELETE. `PATCH /auth/profile` and `POST /auth/password` as Cambium-native handlers (no Rhizome proxy).
 
-### Unified search + thread context ✓ complete (rhytidome, #16)
+### Unified search + thread context ✓ complete (#16)
 
 `GET /api/v1/search` proxy; `POST/DELETE /api/v1/threads/{id}/context`; `initial_context` pass-through on thread creation with Rhizome 400-detail propagation. Fixed a pre-existing bug where `proxyData`/`proxyDataWithPathParam` collapsed every non-GET request to POST before forwarding, silently breaking PATCH/DELETE proxy routes in production — replaced with method-preserving `DataRequest`.
 
-### Notification SSE stream + sync endpoint ✓ complete (rhytidome, #19)
+### Notification SSE stream + sync endpoint ✓ complete (#19)
 
 `GET /api/v1/notifications/stream` proxies Rhizome's long-lived SSE notification stream; `GET /api/v1/notifications` proxies the sync snapshot. Required a new client method, `StreamData` (GET with query params, mirrors `openStream` but without a JSON body).
 
-### Static frontend serving ✓ complete (rhytidome, #21)
+### Static frontend serving ✓ complete (#21)
 
 `internal/api/static.go` serves the built Verdant Pages `dist/` (`STATIC_DIR` env var, default `./dist`) for any path not claimed by a more specific route; unknown paths fall back to `index.html` for client-side routing. Registered as the catch-all `"/"` pattern — Go's `ServeMux` always prefers the most specific match, verified by a router-level precedence test.
 
-`rhytidome` is not yet merged to `main` — kept open pending further fixes discovered while wiring #19/#21.
+These follow-on branches are merged into `main`.
 
 ---
 
