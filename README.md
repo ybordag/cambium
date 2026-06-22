@@ -68,8 +68,9 @@ Regenerate the spec after handler changes:
 - [Code organization](docs/development/code-organization.md)
 - [Adding routes](docs/development/adding-routes.md)
 - [Testing guide](docs/development/testing.md)
+- [Production readiness](docs/operations/production-readiness.md)
 - [Roadmap](docs/roadmap/overview.md)
-- [Full design document](docs/design.md)
+- [Historical design document](docs/design.md)
 
 ## Related repos
 

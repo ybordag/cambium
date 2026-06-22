@@ -5,6 +5,11 @@ in [docs/architecture](architecture/overview.md) and
 [docs/roadmap](roadmap/overview.md)
 **Version:** 0.3
 
+Read this as an implementation record, not the current source of truth. For
+current route ownership and runtime behavior, start with
+[Architecture Overview](architecture/overview.md), [API Surface](architecture/api-surface.md),
+and [Production Readiness](operations/production-readiness.md).
+
 ---
 
 ## What it is

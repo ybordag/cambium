@@ -13,8 +13,11 @@
 ## Roadmap
 - [Roadmap Overview](roadmap/overview.md) — phase status, what's next, deployment plan
 
-## Design Reference
-- [Full Design Document](design.md) — architecture decisions, database DDL, build order, open questions
+## Operations
+- [Production Readiness](operations/production-readiness.md) — security, deployment, and operational checklist
+
+## Historical Design Reference
+- [Full Design Document](design.md) — original design and build-order record; current behavior may be superseded by architecture docs
 - [Deferred Tests](DEFERRED_TESTS.md) — consciously skipped test areas with rationale
 
 ## Development

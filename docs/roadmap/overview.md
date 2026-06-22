@@ -38,7 +38,8 @@ Auth endpoints (`/auth/register`, `/auth/login`) need brute-force protection. Op
 - `golang.org/x/time/rate` (in-process, resets on restart)
 - Redis-backed rate limiter (survives restarts, works across multiple Cambium instances)
 
-Decision needed before production deployment.
+Decision needed before production deployment. See
+[Production Readiness](../operations/production-readiness.md).
 
 ### Multi-tenancy in Rhizome — audited 2026-06-20
 
@@ -50,6 +51,9 @@ If the master encryption key ever needs rotating, all stored provider keys must 
 1. Decrypt all keys with old key
 2. Re-encrypt with new key
 3. Swap env var + redeploy atomically
+
+See [Production Readiness](../operations/production-readiness.md) for the
+broader security checklist.
 
 ### gRPC migration
 
