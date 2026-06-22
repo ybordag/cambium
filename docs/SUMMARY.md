@@ -6,6 +6,7 @@
 
 ## Architecture
 - [Overview](architecture/overview.md) — system topology, components, DB ownership, provider key flow
+- [API Surface](architecture/api-surface.md) — public route groups, ownership, and runtime path
 - [Auth Flow](architecture/auth-flow.md) — JWT lifecycle, token rotation, security properties
 - [Request Lifecycle](architecture/request-lifecycle.md) — data requests, SSE streaming, AI triggers, interaction pause/resume
 

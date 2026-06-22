@@ -130,22 +130,9 @@ This split keeps LLM costs low — a `GET /api/v1/tasks/daily` costs zero tokens
 
 ## Public API Surface
 
-Cambium exposes the public `/api/v1` contract consumed by Verdant. The current
-surface includes:
-
-- chat and chat resume, streaming and non-streaming
-- provider key management
-- garden profile, beds, containers, plants, batches, search, and locations
-- projects, briefs, proposals, project tasks, project resources, expenses, and
-  shopping
-- task CRUD, lifecycle actions, dependencies, series, daily/due/blocked lists,
-  and materialization triggers
-- triage, weather, incidents, treatment plans, interactions, alerts, monitor
-  runs, notifications, activity, calendar annotations, and unified search
-- thread creation, history, delete, and pinned context management
-- media stubs, currently returning `501 Not Implemented`
-
-The generated Swagger UI at `/docs/index.html` is the exhaustive endpoint list.
+Cambium exposes the public `/api/v1` contract consumed by Verdant. See
+[API Surface](api-surface.md) for the human route map and `/docs/index.html`
+for exact generated schemas.
 
 ---
 

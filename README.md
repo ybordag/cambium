@@ -62,6 +62,7 @@ Regenerate the spec after handler changes:
 - [Setup & running locally](docs/getting-started/setup.md)
 - [Using the API](docs/getting-started/using-the-api.md)
 - [Architecture overview](docs/architecture/overview.md)
+- [API surface](docs/architecture/api-surface.md)
 - [Auth flow](docs/architecture/auth-flow.md)
 - [Request lifecycle](docs/architecture/request-lifecycle.md)
 - [Code organization](docs/development/code-organization.md)
