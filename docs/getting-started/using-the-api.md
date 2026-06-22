@@ -133,6 +133,19 @@ curl http://localhost:8080/api/v1/threads/silver-fern-cascade/messages \
   -H "Authorization: Bearer <access_token>"
 ```
 
+Get the normalized startup/session context for Verdant display or editing:
+
+```bash
+curl http://localhost:8080/api/v1/threads/silver-fern-cascade/session-context \
+  -H "Authorization: Bearer <access_token>"
+# → {"available_minutes": 30, "energy_level": "low", ..., "source": "inferred"}
+```
+
+Use `GET/PATCH /api/v1/threads/{id}/session-context` for this normalized
+`SessionContextView` contract. Thread metadata may also include a
+`session_context` field, but that value is Rhizome's raw stored JSON and is not
+the frontend display/edit shape.
+
 ## 5. Chat with the agent
 
 Every chat request requires the `thread_id` from step 4.

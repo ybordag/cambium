@@ -94,5 +94,5 @@ Tests consciously deferred with rationale and re-enable criteria.
 
 ### Transport failure for `/search` and `/threads/{id}/context`
 **What:** When Rhizome is unreachable, `GET /api/v1/search`, `POST /api/v1/threads/{id}/context`, and the DELETE variant should return 502, consistent with every other proxy route.
-**Why deferred:** Same underlying mechanism as the existing "502 handling under Rhizome failure" deferral above — `dispatchData` surfaces the client error through `writeError(w, 502, ...)` for any route. Not re-verified per-route.
+**Why deferred:** Same underlying mechanism as the existing "502 handling under Rhizome failure" deferral above — `dispatchData` surfaces the client error through `writeError(w, 502, ...)` for any route. Not re-verified per-route. The newer `GET/PATCH /api/v1/threads/{id}/session-context` routes are covered directly by `TestThreadSessionContext_RhizomeUnavailableReturns502`.
 **Re-enable when:** Adding a dedicated "Rhizome down" smoke test that sweeps all proxy routes in one pass, rather than one per route.
