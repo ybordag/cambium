@@ -14,6 +14,12 @@ Cambium ships with a built-in Swagger UI. Once the server is running, open:
 http://localhost:8080/docs/index.html
 ```
 
+From a local checkout, you can also run:
+
+```bash
+make docs-ui
+```
+
 ### What is Swagger?
 
 **OpenAPI** (the standard, formerly known as Swagger) is a machine-readable specification that describes every endpoint in a REST API — its URL, HTTP method, parameters, request body shape, response codes, and authentication requirements. The spec lives in `docs/swagger.json` and `docs/swagger.yaml`.
@@ -46,10 +52,15 @@ FastAPI generates this automatically from Python type hints — no extra work ne
 The spec is generated from annotations in the Go handler code. After changing any handler signature, adding an endpoint, or modifying a request/response type, regenerate it:
 
 ```bash
-~/go/bin/swag init -g cmd/server/main.go -o docs
+make swagger
 ```
 
 Commit the updated `docs/swagger.json` and `docs/swagger.yaml` alongside the code change. The spec is a first-class artifact — it should always reflect the live API.
+
+Cambium's `make swagger` regenerates committed Swagger artifacts from Go
+annotations. Rhizome's Makefile uses `make swagger` differently: it exports a
+FastAPI-generated OpenAPI JSON snapshot because Rhizome does not commit a
+generated Swagger bundle.
 
 ---
 

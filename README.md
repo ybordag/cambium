@@ -48,13 +48,16 @@ Postgres
 
 See [Getting Started — Setup](docs/getting-started/setup.md).
 
+Common local workflows are available through `make`. Run `make help` for setup,
+backend stack, test, Swagger, and build targets.
+
 ## API explorer (Swagger UI)
 
 Once Cambium is running, open **http://localhost:8080/docs/index.html** for an interactive API explorer. All endpoints are documented with request/response schemas and can be tested directly from the browser.
 
 Regenerate the spec after handler changes:
 ```bash
-~/go/bin/swag init -g cmd/server/main.go -o docs
+make swagger
 ```
 
 ## Documentation

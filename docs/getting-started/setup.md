@@ -193,16 +193,20 @@ make dev-stack
 make dev-stack-db
 make run-env
 make test
+make test-security
+make test-proxy
 make test-one RUN=TestDispatchData_PATCHForwardsAsPatchNotPost
 make swagger
 make swagger-check
+make clean-swagger-check
 ```
 
 The Makefile wraps the documented Go, Postgres, Swagger, and local health-check
 commands. `make run` uses the current shell environment; `make run-env` sources
 `.env` first. `make swagger` updates the committed Swagger artifacts under
 `docs/`; `make swagger-check` generates into `/tmp/cambium-swagger` without
-changing tracked files.
+changing tracked files, and `make clean-swagger-check` removes that temporary
+output.
 
 Use `make dev-stack` to run Rhizome and Cambium together in the foreground with
 interleaved logs; `Ctrl-C` stops both processes. Use `make dev-stack-db` to
@@ -214,6 +218,10 @@ on port `8001`; override with `RHIZOME_DIR=...`, `RHIZOME_PORT=...`, or
 The Makefile intentionally does not include Kubernetes apply/deploy or
 destructive Postgres reset targets. Those operations depend on the current
 cluster, registry, and database state.
+
+Note that Cambium's `make swagger` regenerates committed Swagger files from Go
+handler annotations. Rhizome's `make swagger` exports a FastAPI OpenAPI JSON
+snapshot instead, so the same target name has repo-specific behavior.
 
 ---
 

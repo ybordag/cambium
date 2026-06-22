@@ -48,12 +48,15 @@ help:
 	@printf '%s\n' '  make test-api           Run API tests'
 	@printf '%s\n' '  make test-auth          Run auth tests'
 	@printf '%s\n' '  make test-rhizome       Run Rhizome client tests'
+	@printf '%s\n' '  make test-security      Run protected-route security sweep'
+	@printf '%s\n' '  make test-proxy         Run focused proxy regression tests'
 	@printf '%s\n' '  make test-one RUN=...   Run one test; override PKG=... if needed'
 	@printf '%s\n' '  make check              Alias for make test'
 	@printf '%s\n' ''
 	@printf '%s\n' 'Swagger and Docker:'
 	@printf '%s\n' '  make swagger            Regenerate committed Swagger docs'
 	@printf '%s\n' '  make swagger-check      Validate Swagger generation into /tmp'
+	@printf '%s\n' '  make clean-swagger-check Remove /tmp Swagger check output'
 	@printf '%s\n' '  make swagger-ui         Alias for make docs-ui'
 	@printf '%s\n' '  make docker-build       Build a local cambium:latest image'
 
@@ -152,6 +155,14 @@ test-auth:
 test-rhizome:
 	$(GO) test ./internal/rhizome
 
+.PHONY: test-security
+test-security:
+	$(GO) test ./internal/api -run TestAllProtectedRoutesReject401
+
+.PHONY: test-proxy
+test-proxy:
+	$(GO) test ./internal/api -run 'TestDispatchData|Test.*Proxy|Test.*Rhizome'
+
 .PHONY: test-one
 test-one:
 	@test -n "$(RUN)" || (printf '%s\n' 'Usage: make test-one RUN=TestName [PKG=./internal/api]' && exit 1)
@@ -168,6 +179,10 @@ swagger:
 swagger-check:
 	rm -rf /tmp/cambium-swagger
 	$(SWAG) init -g cmd/server/main.go -o /tmp/cambium-swagger
+
+.PHONY: clean-swagger-check
+clean-swagger-check:
+	rm -rf /tmp/cambium-swagger
 
 .PHONY: swagger-ui
 swagger-ui: docs-ui
