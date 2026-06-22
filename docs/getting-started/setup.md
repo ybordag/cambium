@@ -176,6 +176,38 @@ For route or handler changes, also regenerate and commit Swagger output:
 
 ---
 
+## Makefile shortcuts
+
+Cambium includes a `Makefile` for common local workflows. Run:
+
+```bash
+make help
+```
+
+Useful examples:
+
+```bash
+make setup
+make postgres-up
+make run-env
+make test
+make test-one RUN=TestDispatchData_PATCHForwardsAsPatchNotPost
+make swagger
+make swagger-check
+```
+
+The Makefile wraps the documented Go, Postgres, Swagger, and local health-check
+commands. `make run` uses the current shell environment; `make run-env` sources
+`.env` first. `make swagger` updates the committed Swagger artifacts under
+`docs/`; `make swagger-check` generates into `/tmp/cambium-swagger` without
+changing tracked files.
+
+The Makefile intentionally does not include Kubernetes apply/deploy or
+destructive Postgres reset targets. Those operations depend on the current
+cluster, registry, and database state.
+
+---
+
 ## Troubleshooting
 
 ### `docker: Conflict. The container name "rhizome-pg" is already in use`
