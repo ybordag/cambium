@@ -13,7 +13,7 @@ Verdant serving. The current `main` branch contains the merged API surface.
 | Phase 2 — Auth + key management | ✓ done | Register/login/refresh/logout, JWT middleware, AES-256-GCM provider key storage |
 | Phase 3 — Rhizome proxy | ✓ done | Rhizome HTTP client, SSE streaming, provider key injection, partial route wiring |
 | Phase 4 — Full API surface | ✓ done | Core API surface wired; AI-trigger handlers; media stubs; comprehensive docs |
-| Phase 5 — Thread management | ✓ done | Botanical name generator; `POST/GET/DELETE /api/v1/threads`; full conversation history |
+| Phase 5 — Thread management | ✓ done | Botanical name generator; `POST/GET/DELETE /api/v1/threads`; full conversation history; normalized `GET/PATCH /api/v1/threads/{id}/session-context` |
 | Frontend API pass | ✓ done | Expanded route surface for task CRUD/series/dependencies, garden detail, calendar, shopping, activity stats |
 | Group B + account | ✓ done | Quick care recording, incident PATCH/DELETE, manual treatment plans, native profile/password endpoints |
 | #16 — Unified search + thread context | ✓ done | `GET /api/v1/search`; thread pinned context; fixed a method-collapsing bug in the data proxy |

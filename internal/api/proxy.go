@@ -275,6 +275,48 @@ func (h *proxyHandler) notificationStream(w http.ResponseWriter, r *http.Request
 }
 
 // -------------------------------------------------------------------------
+// Threads — structured session context proxy
+// -------------------------------------------------------------------------
+
+// getThreadSessionContext proxies Rhizome's normalized SessionContextView.
+// Verdant should use this endpoint instead of ThreadView.session_context, which
+// is raw stored JSON on Rhizome thread metadata responses.
+//
+//	@Summary	Get thread session context
+//	@Tags		threads
+//	@Produce	json
+//	@Security	BearerAuth
+//	@Param		id	path		string	true	"Thread ID"
+//	@Success	200	{object}	SessionContextView
+//	@Failure	401	{object}	ErrorResponse
+//	@Failure	404	{object}	ErrorResponse
+//	@Failure	502	{object}	ErrorResponse
+//	@Router		/api/v1/threads/{id}/session-context [get]
+func (h *proxyHandler) getThreadSessionContext(w http.ResponseWriter, r *http.Request) {
+	h.proxyDataWithPathParam("threads", "id").ServeHTTP(w, r)
+}
+
+// patchThreadSessionContext proxies user overrides for Rhizome's normalized
+// SessionContextView. Explicit nulls clear nullable fields.
+//
+//	@Summary	Update thread session context
+//	@Tags		threads
+//	@Accept		json
+//	@Produce	json
+//	@Security	BearerAuth
+//	@Param		id		path	string						true	"Thread ID"
+//	@Param		body	body	UpdateSessionContextRequest	true	"Partial session context override"
+//	@Success	200		{object}	SessionContextView
+//	@Failure	400		{object}	ErrorResponse
+//	@Failure	401		{object}	ErrorResponse
+//	@Failure	404		{object}	ErrorResponse
+//	@Failure	502		{object}	ErrorResponse
+//	@Router		/api/v1/threads/{id}/session-context [patch]
+func (h *proxyHandler) patchThreadSessionContext(w http.ResponseWriter, r *http.Request) {
+	h.proxyDataWithPathParam("threads", "id").ServeHTTP(w, r)
+}
+
+// -------------------------------------------------------------------------
 // Data proxy — CRUD pass-through
 // -------------------------------------------------------------------------
 

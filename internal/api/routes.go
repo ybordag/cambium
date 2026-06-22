@@ -253,6 +253,8 @@ func NewRouter(pool *pgxpool.Pool) http.Handler {
 	mux.Handle("GET /api/v1/threads/{id}/messages", RequireAuth(ph.proxyDataWithPathParam("threads", "id")))
 	mux.Handle("GET /api/v1/threads/{id}", RequireAuth(ph.proxyDataWithPathParam("threads", "id")))
 	mux.Handle("DELETE /api/v1/threads/{id}", RequireAuth(ph.proxyDataWithPathParam("threads", "id")))
+	mux.Handle("GET /api/v1/threads/{id}/session-context", RequireAuth(http.HandlerFunc(ph.getThreadSessionContext)))
+	mux.Handle("PATCH /api/v1/threads/{id}/session-context", RequireAuth(http.HandlerFunc(ph.patchThreadSessionContext)))
 	mux.Handle("POST /api/v1/threads/{id}/context", RequireAuth(ph.proxyDataWithPathParam("threads", "id")))
 	mux.Handle("DELETE /api/v1/threads/{id}/context/{subjectType}/{subjectId}", RequireAuth(ph.proxyDataWithPathParam("threads", "id")))
 

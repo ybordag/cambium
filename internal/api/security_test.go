@@ -37,6 +37,8 @@ func TestAllProtectedRoutesReject401(t *testing.T) {
 		{"GET", "/api/v1/threads/some-thread-id"},
 		{"GET", "/api/v1/threads/some-thread-id/messages"},
 		{"DELETE", "/api/v1/threads/some-thread-id"},
+		{"GET", "/api/v1/threads/some-thread-id/session-context"},
+		{"PATCH", "/api/v1/threads/some-thread-id/session-context"},
 		{"POST", "/api/v1/threads/some-thread-id/context"},
 		{"DELETE", "/api/v1/threads/some-thread-id/context/plant/some-plant-id"},
 

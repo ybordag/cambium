@@ -103,6 +103,47 @@ definitions:
         example: silver-fern-cascade
         type: string
     type: object
+  api.SessionContextView:
+    properties:
+      available_minutes:
+        example: 30
+        type: integer
+      energy_level:
+        enum:
+        - low
+        - medium
+        - high
+        example: low
+        type: string
+      focus_label:
+        example: Tomato bed refresh
+        type: string
+      focus_project_id:
+        example: project-uuid
+        type: string
+      open_to_outdoor_work:
+        example: true
+        type: boolean
+      preferred_location_type:
+        enum:
+        - bed
+        - container
+        example: container
+        type: string
+      source:
+        enum:
+        - unset
+        - inferred
+        - user
+        example: inferred
+        type: string
+      updated_at:
+        example: "2026-06-21T16:44:56Z"
+        type: string
+      wants_quick_wins:
+        example: true
+        type: boolean
+    type: object
   api.SessionResponse:
     properties:
       email:
@@ -142,6 +183,34 @@ definitions:
       access_token:
         example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
         type: string
+    type: object
+  api.UpdateSessionContextRequest:
+    properties:
+      available_minutes:
+        example: 15
+        type: integer
+      energy_level:
+        enum:
+        - low
+        - medium
+        - high
+        example: medium
+        type: string
+      focus_project_id:
+        example: project-uuid
+        type: string
+      open_to_outdoor_work:
+        example: false
+        type: boolean
+      preferred_location_type:
+        enum:
+        - bed
+        - container
+        example: bed
+        type: string
+      wants_quick_wins:
+        example: true
+        type: boolean
     type: object
 host: localhost:8080
 info:
@@ -550,6 +619,81 @@ paths:
       security:
       - BearerAuth: []
       summary: Create conversation thread
+      tags:
+      - threads
+  /api/v1/threads/{id}/session-context:
+    get:
+      parameters:
+      - description: Thread ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.SessionContextView'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "502":
+          description: Bad Gateway
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get thread session context
+      tags:
+      - threads
+    patch:
+      consumes:
+      - application/json
+      parameters:
+      - description: Thread ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Partial session context override
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.UpdateSessionContextRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.SessionContextView'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "502":
+          description: Bad Gateway
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update thread session context
       tags:
       - threads
   /api/v1/triage/run:

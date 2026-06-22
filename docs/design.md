@@ -347,7 +347,7 @@ Quick care recording (`POST .../care`) for plants/beds/containers. Incident PATC
 
 ### Unified search + thread context ✓ complete (#16)
 
-`GET /api/v1/search` proxy; `POST/DELETE /api/v1/threads/{id}/context`; `initial_context` pass-through on thread creation with Rhizome 400-detail propagation. Fixed a pre-existing bug where `proxyData`/`proxyDataWithPathParam` collapsed every non-GET request to POST before forwarding, silently breaking PATCH/DELETE proxy routes in production — replaced with method-preserving `DataRequest`.
+`GET /api/v1/search` proxy; `POST/DELETE /api/v1/threads/{id}/context`; `GET/PATCH /api/v1/threads/{id}/session-context` for normalized startup/session context; `initial_context` pass-through on thread creation with Rhizome 400-detail propagation. Fixed a pre-existing bug where `proxyData`/`proxyDataWithPathParam` collapsed every non-GET request to POST before forwarding, silently breaking PATCH/DELETE proxy routes in production — replaced with method-preserving `DataRequest`.
 
 ### Notification SSE stream + sync endpoint ✓ complete (#19)
 

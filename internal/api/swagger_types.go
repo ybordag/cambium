@@ -103,6 +103,32 @@ type PinnedContextResponse struct {
 	PinnedContext []PinnedContextEntryInput `json:"pinned_context"`
 }
 
+// SessionContextView is the normalized session context returned by
+// GET/PATCH /api/v1/threads/{id}/session-context.
+type SessionContextView struct {
+	AvailableMinutes      *int    `json:"available_minutes,omitempty" example:"30"`
+	EnergyLevel           *string `json:"energy_level,omitempty" example:"low" enums:"low,medium,high"`
+	FocusProjectID        *string `json:"focus_project_id,omitempty" example:"project-uuid"`
+	FocusLabel            *string `json:"focus_label,omitempty" example:"Tomato bed refresh"`
+	PreferredLocationType *string `json:"preferred_location_type,omitempty" example:"container" enums:"bed,container"`
+	OpenToOutdoorWork     *bool   `json:"open_to_outdoor_work,omitempty" example:"true"`
+	WantsQuickWins        *bool   `json:"wants_quick_wins,omitempty" example:"true"`
+	Source                string  `json:"source" example:"inferred" enums:"unset,inferred,user"`
+	UpdatedAt             *string `json:"updated_at,omitempty" example:"2026-06-21T16:44:56Z"`
+}
+
+// UpdateSessionContextRequest is a partial override body for PATCH
+// /api/v1/threads/{id}/session-context. Explicit JSON null clears nullable
+// fields; omitted fields are left unchanged.
+type UpdateSessionContextRequest struct {
+	AvailableMinutes      *int    `json:"available_minutes,omitempty" example:"15"`
+	EnergyLevel           *string `json:"energy_level,omitempty" example:"medium" enums:"low,medium,high"`
+	FocusProjectID        *string `json:"focus_project_id,omitempty" example:"project-uuid"`
+	PreferredLocationType *string `json:"preferred_location_type,omitempty" example:"bed" enums:"bed,container"`
+	OpenToOutdoorWork     *bool   `json:"open_to_outdoor_work,omitempty" example:"false"`
+	WantsQuickWins        *bool   `json:"wants_quick_wins,omitempty" example:"true"`
+}
+
 // --- Errors ---
 
 // ErrorResponse is returned on all 4xx/5xx responses.

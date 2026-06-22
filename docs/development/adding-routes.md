@@ -55,6 +55,7 @@ Examples:
 - `GET /api/v1/tasks/daily`
 - `PATCH /api/v1/garden/profile`
 - `DELETE /api/v1/threads/{id}/context/{subjectType}/{subjectId}`
+- `PATCH /api/v1/threads/{id}/session-context`
 - `GET /api/v1/search`
 - `POST /api/v1/alerts/{id}/dismiss`
 

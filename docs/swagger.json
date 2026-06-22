@@ -649,6 +649,124 @@
                 }
             }
         },
+        "/api/v1/threads/{id}/session-context": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "threads"
+                ],
+                "summary": "Get thread session context",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Thread ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.SessionContextView"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/api.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/api.ErrorResponse"
+                        }
+                    },
+                    "502": {
+                        "description": "Bad Gateway",
+                        "schema": {
+                            "$ref": "#/definitions/api.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "threads"
+                ],
+                "summary": "Update thread session context",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Thread ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Partial session context override",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.UpdateSessionContextRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.SessionContextView"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/api.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/api.ErrorResponse"
+                        }
+                    },
+                    "502": {
+                        "description": "Bad Gateway",
+                        "schema": {
+                            "$ref": "#/definitions/api.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/triage/run": {
             "post": {
                 "security": [
@@ -1194,6 +1312,61 @@
                 }
             }
         },
+        "api.SessionContextView": {
+            "type": "object",
+            "properties": {
+                "available_minutes": {
+                    "type": "integer",
+                    "example": 30
+                },
+                "energy_level": {
+                    "type": "string",
+                    "enum": [
+                        "low",
+                        "medium",
+                        "high"
+                    ],
+                    "example": "low"
+                },
+                "focus_label": {
+                    "type": "string",
+                    "example": "Tomato bed refresh"
+                },
+                "focus_project_id": {
+                    "type": "string",
+                    "example": "project-uuid"
+                },
+                "open_to_outdoor_work": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "preferred_location_type": {
+                    "type": "string",
+                    "enum": [
+                        "bed",
+                        "container"
+                    ],
+                    "example": "container"
+                },
+                "source": {
+                    "type": "string",
+                    "enum": [
+                        "unset",
+                        "inferred",
+                        "user"
+                    ],
+                    "example": "inferred"
+                },
+                "updated_at": {
+                    "type": "string",
+                    "example": "2026-06-21T16:44:56Z"
+                },
+                "wants_quick_wins": {
+                    "type": "boolean",
+                    "example": true
+                }
+            }
+        },
         "api.SessionResponse": {
             "type": "object",
             "properties": {
@@ -1248,6 +1421,44 @@
                 "access_token": {
                     "type": "string",
                     "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                }
+            }
+        },
+        "api.UpdateSessionContextRequest": {
+            "type": "object",
+            "properties": {
+                "available_minutes": {
+                    "type": "integer",
+                    "example": 15
+                },
+                "energy_level": {
+                    "type": "string",
+                    "enum": [
+                        "low",
+                        "medium",
+                        "high"
+                    ],
+                    "example": "medium"
+                },
+                "focus_project_id": {
+                    "type": "string",
+                    "example": "project-uuid"
+                },
+                "open_to_outdoor_work": {
+                    "type": "boolean",
+                    "example": false
+                },
+                "preferred_location_type": {
+                    "type": "string",
+                    "enum": [
+                        "bed",
+                        "container"
+                    ],
+                    "example": "bed"
+                },
+                "wants_quick_wins": {
+                    "type": "boolean",
+                    "example": true
                 }
             }
         }

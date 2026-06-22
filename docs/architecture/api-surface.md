@@ -154,12 +154,17 @@ Durable alert and interaction state lives in Rhizome.
 - `GET /api/v1/threads/{id}`
 - `GET /api/v1/threads/{id}/messages`
 - `DELETE /api/v1/threads/{id}`
+- `GET /api/v1/threads/{id}/session-context`
+- `PATCH /api/v1/threads/{id}/session-context`
 - `POST /api/v1/threads/{id}/context`
 - `DELETE /api/v1/threads/{id}/context/{subjectType}/{subjectId}`
 
 Cambium creates botanical thread IDs and forwards the new thread to Rhizome.
-Listing, history, deletion, and pinned context are structured Rhizome data
-routes.
+Listing, history, deletion, pinned context, and session context are structured
+Rhizome data routes. Verdant should use `GET/PATCH
+/api/v1/threads/{id}/session-context` for the normalized startup/session
+context contract; Rhizome thread metadata may also include `session_context`,
+but that field is raw stored JSON and not the `SessionContextView` shape.
 
 ### Calendar, Shopping, Activity
 

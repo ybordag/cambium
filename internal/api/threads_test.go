@@ -6,6 +6,8 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/ybordag/cambium/internal/auth"
 )
 
 // fakeRhizomeThreadServer returns a test HTTP server that mimics Rhizome's
@@ -213,6 +215,92 @@ func TestRemoveThreadContext_ProxiesAsDelete(t *testing.T) {
 	}
 }
 
+func TestGetThreadSessionContext_ProxiesToRhizome(t *testing.T) {
+	var gotPath, gotMethod, gotQuery string
+	fake := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotPath = r.URL.Path
+		gotMethod = r.Method
+		gotQuery = r.URL.RawQuery
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]any{
+			"available_minutes":       20,
+			"energy_level":            "low",
+			"focus_project_id":        nil,
+			"focus_label":             nil,
+			"preferred_location_type": "container",
+			"open_to_outdoor_work":    true,
+			"wants_quick_wins":        true,
+			"source":                  "inferred",
+			"updated_at":              "2026-06-21T16:44:56Z",
+		})
+	}))
+	defer fake.Close()
+	t.Setenv("RHIZOME_INTERNAL_URL", fake.URL)
+
+	srv := newTestServer(t)
+	token := registerAndGetToken(t, srv, "session-context-get@example.com")
+	wantUserID, err := auth.VerifyAccessToken(token)
+	if err != nil {
+		t.Fatalf("verify token: %v", err)
+	}
+
+	resp := doRequestWithToken(t, srv, "GET", "/api/v1/threads/thread-1/session-context", "", token)
+	if resp.Code != http.StatusOK {
+		t.Fatalf("get session context: got %d — %s", resp.Code, resp.Body)
+	}
+	if gotMethod != http.MethodGet {
+		t.Errorf("expected rhizome to see GET, got %s", gotMethod)
+	}
+	if gotPath != "/internal/data/threads/thread-1/session-context" {
+		t.Errorf("unexpected rhizome path: %s", gotPath)
+	}
+	if gotQuery != "user_id="+wantUserID {
+		t.Errorf("expected Cambium to inject user_id query, got %q", gotQuery)
+	}
+}
+
+func TestPatchThreadSessionContext_ProxiesAsPatchWithBody(t *testing.T) {
+	var gotPath, gotMethod string
+	var gotBody map[string]any
+	fake := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotPath = r.URL.Path
+		gotMethod = r.Method
+		json.NewDecoder(r.Body).Decode(&gotBody)
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]any{
+			"available_minutes":       10,
+			"energy_level":            "high",
+			"focus_project_id":        nil,
+			"focus_label":             nil,
+			"preferred_location_type": nil,
+			"open_to_outdoor_work":    false,
+			"wants_quick_wins":        true,
+			"source":                  "user",
+			"updated_at":              "2026-06-21T16:44:56Z",
+		})
+	}))
+	defer fake.Close()
+	t.Setenv("RHIZOME_INTERNAL_URL", fake.URL)
+
+	srv := newTestServer(t)
+	token := registerAndGetToken(t, srv, "session-context-patch@example.com")
+
+	resp := doRequestWithToken(t, srv, "PATCH", "/api/v1/threads/thread-1/session-context",
+		`{"available_minutes":10,"energy_level":"high","open_to_outdoor_work":false}`, token)
+	if resp.Code != http.StatusOK {
+		t.Fatalf("patch session context: got %d — %s", resp.Code, resp.Body)
+	}
+	if gotMethod != http.MethodPatch {
+		t.Errorf("expected rhizome to see PATCH, got %s", gotMethod)
+	}
+	if gotPath != "/internal/data/threads/thread-1/session-context" {
+		t.Errorf("unexpected rhizome path: %s", gotPath)
+	}
+	if gotBody["available_minutes"] != float64(10) || gotBody["energy_level"] != "high" || gotBody["open_to_outdoor_work"] != false {
+		t.Errorf("body not forwarded: %v", gotBody)
+	}
+}
+
 // fakeRhizomeStatus returns a server that always responds with the given
 // status and JSON body, regardless of method or path — used to verify
 // Cambium passes Rhizome's error responses through unchanged.
@@ -283,6 +371,24 @@ func TestRemoveThreadContext_PassesThroughRhizome404(t *testing.T) {
 	}
 }
 
+func TestPatchThreadSessionContext_PassesThroughRhizome400(t *testing.T) {
+	fake := fakeRhizomeStatus(t, http.StatusBadRequest, `{"detail":"empty session context patch"}`)
+	t.Setenv("RHIZOME_INTERNAL_URL", fake.URL)
+
+	srv := newTestServer(t)
+	token := registerAndGetToken(t, srv, "session-context-400@example.com")
+
+	resp := doRequestWithToken(t, srv, "PATCH", "/api/v1/threads/thread-1/session-context", `{}`, token)
+	if resp.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400 passed through from rhizome, got %d — %s", resp.Code, resp.Body)
+	}
+	var out map[string]string
+	json.NewDecoder(resp.Body).Decode(&out)
+	if out["detail"] != "empty session context patch" {
+		t.Errorf("expected rhizome body forwarded verbatim, got %v", out)
+	}
+}
+
 func TestThreadContext_RequiresAuth(t *testing.T) {
 	srv := newTestServer(t)
 
@@ -294,5 +400,15 @@ func TestThreadContext_RequiresAuth(t *testing.T) {
 	resp = doRequest(t, srv, "DELETE", "/api/v1/threads/thread-1/context/plant/p1", "")
 	if resp.Code != http.StatusUnauthorized {
 		t.Errorf("remove context without auth: got %d, want 401", resp.Code)
+	}
+
+	resp = doRequest(t, srv, "GET", "/api/v1/threads/thread-1/session-context", "")
+	if resp.Code != http.StatusUnauthorized {
+		t.Errorf("get session context without auth: got %d, want 401", resp.Code)
+	}
+
+	resp = doRequest(t, srv, "PATCH", "/api/v1/threads/thread-1/session-context", `{"available_minutes":10}`)
+	if resp.Code != http.StatusUnauthorized {
+		t.Errorf("patch session context without auth: got %d, want 401", resp.Code)
 	}
 }
