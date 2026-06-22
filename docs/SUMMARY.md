@@ -18,4 +18,5 @@
 
 ## Development
 - [Code Organization](development/code-organization.md) — directory guide, module responsibilities, change rules
+- [Adding Routes](development/adding-routes.md) — choosing native/proxy/agent/SSE patterns safely
 - [Testing Guide](development/testing.md) — test layers, route testing rules, fake Rhizome pattern

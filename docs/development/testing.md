@@ -96,6 +96,8 @@ When adding or changing a route:
 The method-preserving proxy path is important. `PATCH`, `DELETE`, and non-agent
 `POST` routes must reach Rhizome with the same HTTP method Verdant sent.
 
+For the full route-change workflow, see [Adding Routes](adding-routes.md).
+
 ---
 
 ## Fake Rhizome Pattern

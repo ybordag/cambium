@@ -65,6 +65,7 @@ Regenerate the spec after handler changes:
 - [Auth flow](docs/architecture/auth-flow.md)
 - [Request lifecycle](docs/architecture/request-lifecycle.md)
 - [Code organization](docs/development/code-organization.md)
+- [Adding routes](docs/development/adding-routes.md)
 - [Testing guide](docs/development/testing.md)
 - [Roadmap](docs/roadmap/overview.md)
 - [Full design document](docs/design.md)

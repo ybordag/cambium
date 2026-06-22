@@ -120,3 +120,5 @@ Provider keys are included only in agent requests that may call an LLM.
 ```
 
 - Add or update tests next to the changed package.
+
+For a more complete route workflow, see [Adding Routes](adding-routes.md).
