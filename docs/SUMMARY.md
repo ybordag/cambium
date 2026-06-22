@@ -1,7 +1,7 @@
 # Cambium Documentation
 
 ## Getting Started
-- [Setup](getting-started/setup.md) — prerequisites, Postgres, env vars, running locally
+- [Setup](getting-started/setup.md) — prerequisites, local dev modes, Postgres, env vars, running locally, troubleshooting
 - [Using the API](getting-started/using-the-api.md) — Swagger UI, auth, chat, CRUD, triggers
 
 ## Architecture

@@ -16,6 +16,20 @@ No virtual environment is needed for Go. Dependencies are resolved from `go.mod`
 
 ---
 
+## Local Development Modes
+
+| Mode | Run Cambium | Run Rhizome | Run Verdant build | Use when |
+|---|---|---|---|---|
+| Auth/API gateway only | yes | no | optional | Working on auth, provider keys, static serving, route registration, or docs |
+| Cambium + Rhizome | yes | yes | optional | Working on proxied API routes, chat, triggers, notifications, or end-to-end backend behavior |
+| Full app | yes | yes | yes | Testing Verdant against the real public API and SPA fallback |
+
+Cambium can start without Rhizome, but proxied `/api/v1/...` requests will
+return `502 Bad Gateway` until `RHIZOME_INTERNAL_URL` points at a running
+Rhizome server.
+
+---
+
 ## 1. Start Postgres
 
 If you haven't already:
@@ -80,6 +94,16 @@ python server.py          # FastAPI on port 8001
 
 Rhizome reads its own `.env` (which has `DATABASE_URL`, `GOOGLE_API_KEY`, etc.).
 
+For shared Postgres local development, Rhizome's `DATABASE_URL` uses the
+SQLAlchemy driver form, for example:
+
+```bash
+DATABASE_URL=postgresql+psycopg2://postgres:dev@localhost:5432/postgres
+```
+
+Cambium's `DATABASE_URL` intentionally uses plain `postgresql://` because it
+connects through Go's `pgx` driver.
+
 ---
 
 ## 4. Start Cambium
@@ -116,6 +140,13 @@ curl http://localhost:8080/health
 # → {"status":"ok"}
 ```
 
+For a proxied route, verify Rhizome is reachable through Cambium:
+
+```bash
+curl "http://localhost:8080/api/v1/tasks/daily" \
+  -H "Authorization: Bearer <access_token>"
+```
+
 ---
 
 ## Build for production
@@ -138,6 +169,92 @@ go test ./...
 API integration tests require a running Postgres instance (uses `DATABASE_URL`). Auth and crypto unit tests run without any external dependencies.
 
 For route or handler changes, also regenerate and commit Swagger output:
+
+```bash
+~/go/bin/swag init -g cmd/server/main.go -o docs
+```
+
+---
+
+## Troubleshooting
+
+### `docker: Conflict. The container name "rhizome-pg" is already in use`
+
+Start the existing container:
+
+```bash
+docker start rhizome-pg
+```
+
+Or inspect it before removing anything:
+
+```bash
+docker ps -a --filter name=rhizome-pg
+```
+
+### `connect: connection refused` or `database: ...`
+
+Postgres is not reachable from Cambium. Check:
+
+- `docker ps` shows `rhizome-pg` running.
+- `DATABASE_URL` is set in the shell where `go run ./cmd/server/` starts.
+- Cambium uses `postgresql://...`, not `postgresql+psycopg2://...`.
+- Port `5432` is not already bound by a different local Postgres.
+
+### `CAMBIUM_ENCRYPTION_KEY must be exactly 32 bytes`
+
+The value is used directly as the AES-256-GCM key. Generate a 32-character
+ASCII value:
+
+```bash
+openssl rand -hex 16
+```
+
+Paste the resulting 32 hex characters as `CAMBIUM_ENCRYPTION_KEY`.
+
+### `JWT_SECRET must be at least 32 bytes`
+
+Generate a longer signing secret:
+
+```bash
+openssl rand -hex 32
+```
+
+### Proxied API requests return `502 Bad Gateway`
+
+Cambium is running, but Rhizome is unavailable or returning an error. Check:
+
+- Rhizome is running with `python server.py`.
+- `RHIZOME_INTERNAL_URL` matches Rhizome's port, usually
+  `http://localhost:8001`.
+- Rhizome has its own `.env` and database dependencies configured.
+- Rhizome Swagger is reachable at `http://localhost:8001/docs`.
+
+### `http://localhost:8080/` returns a file error or blank page
+
+`STATIC_DIR` probably does not point at a built Verdant `dist/` directory.
+Either build Verdant and point `STATIC_DIR` at its output, or use Cambium only
+through `/api/v1/*`, `/auth/*`, `/health`, and `/docs/*` while doing backend
+work.
+
+### `/docs/index.html` is stale after route changes
+
+Regenerate Swagger and restart Cambium:
+
+```bash
+~/go/bin/swag init -g cmd/server/main.go -o docs
+go run ./cmd/server/
+```
+
+### `swag: command not found`
+
+Install the Swagger generator:
+
+```bash
+go install github.com/swaggo/swag/cmd/swag@latest
+```
+
+Then rerun:
 
 ```bash
 ~/go/bin/swag init -g cmd/server/main.go -o docs
