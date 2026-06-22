@@ -2,6 +2,8 @@ GO ?= go
 SWAG ?= $(HOME)/go/bin/swag
 PORT ?= 8080
 BINARY ?= cambium
+RHIZOME_DIR ?= ../rhizome
+RHIZOME_PORT ?= 8001
 POSTGRES_CONTAINER ?= rhizome-pg
 POSTGRES_PASSWORD ?= dev
 POSTGRES_DB ?= postgres
@@ -22,8 +24,16 @@ help:
 	@printf '%s\n' ''
 	@printf '%s\n' 'Postgres:'
 	@printf '%s\n' '  make postgres-up        Start or create the local Postgres container'
+	@printf '%s\n' '  make postgres-wait      Wait until the local Postgres container is ready'
 	@printf '%s\n' '  make postgres-check     Verify the local Postgres container responds'
 	@printf '%s\n' '  make postgres-logs      Show local Postgres container logs'
+	@printf '%s\n' ''
+	@printf '%s\n' 'Dev stack:'
+	@printf '%s\n' '  make dev-rhizome        Run Rhizome API via RHIZOME_DIR'
+	@printf '%s\n' '  make dev-cambium        Run Cambium with .env and RHIZOME_INTERNAL_URL'
+	@printf '%s\n' '  make dev-stack          Run Rhizome and Cambium together'
+	@printf '%s\n' '  make dev-stack-db       Start Postgres, wait, then run the backend stack'
+	@printf '%s\n' '  make stack-health       Check Rhizome and Cambium health endpoints'
 	@printf '%s\n' ''
 	@printf '%s\n' 'Run and build:'
 	@printf '%s\n' '  make run                Run Cambium with current shell environment'
@@ -70,6 +80,10 @@ install-swag:
 postgres-up:
 	docker start $(POSTGRES_CONTAINER) || docker run --name $(POSTGRES_CONTAINER) -e POSTGRES_PASSWORD=$(POSTGRES_PASSWORD) -e POSTGRES_DB=$(POSTGRES_DB) -p $(POSTGRES_PORT):5432 -v rhizome_pgdata:/var/lib/postgresql/data -d postgres:16
 
+.PHONY: postgres-wait
+postgres-wait:
+	until docker exec $(POSTGRES_CONTAINER) pg_isready -U postgres; do sleep 1; done
+
 .PHONY: postgres-check
 postgres-check:
 	docker exec $(POSTGRES_CONTAINER) psql -U postgres -c "SELECT version();"
@@ -77,6 +91,26 @@ postgres-check:
 .PHONY: postgres-logs
 postgres-logs:
 	docker logs $(POSTGRES_CONTAINER)
+
+.PHONY: dev-rhizome
+dev-rhizome:
+	$(MAKE) -C $(RHIZOME_DIR) api PORT=$(RHIZOME_PORT)
+
+.PHONY: dev-cambium
+dev-cambium:
+	set -a; . ./.env; set +a; PORT=$(PORT) RHIZOME_INTERNAL_URL=http://localhost:$(RHIZOME_PORT) $(GO) run ./cmd/server/
+
+.PHONY: dev-stack
+dev-stack:
+	$(MAKE) -j2 dev-rhizome dev-cambium
+
+.PHONY: dev-stack-db
+dev-stack-db: postgres-up postgres-wait dev-stack
+
+.PHONY: stack-health
+stack-health:
+	curl http://localhost:$(RHIZOME_PORT)/health
+	curl http://localhost:$(PORT)/health
 
 .PHONY: run
 run:

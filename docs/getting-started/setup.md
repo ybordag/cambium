@@ -189,6 +189,8 @@ Useful examples:
 ```bash
 make setup
 make postgres-up
+make dev-stack
+make dev-stack-db
 make run-env
 make test
 make test-one RUN=TestDispatchData_PATCHForwardsAsPatchNotPost
@@ -201,6 +203,13 @@ commands. `make run` uses the current shell environment; `make run-env` sources
 `.env` first. `make swagger` updates the committed Swagger artifacts under
 `docs/`; `make swagger-check` generates into `/tmp/cambium-swagger` without
 changing tracked files.
+
+Use `make dev-stack` to run Rhizome and Cambium together in the foreground with
+interleaved logs; `Ctrl-C` stops both processes. Use `make dev-stack-db` to
+start/wait for the shared local Postgres container first, then start both
+services. By default, Cambium expects Rhizome at `../rhizome` and runs Rhizome
+on port `8001`; override with `RHIZOME_DIR=...`, `RHIZOME_PORT=...`, or
+`PORT=...` when needed. `make stack-health` checks both health endpoints.
 
 The Makefile intentionally does not include Kubernetes apply/deploy or
 destructive Postgres reset targets. Those operations depend on the current
