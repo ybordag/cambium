@@ -163,7 +163,7 @@ The binary is statically linked — copy it to any Linux server (same architectu
 ## Running tests
 
 ```bash
-go test ./...
+make test
 ```
 
 API integration tests require a running Postgres instance (uses `DATABASE_URL`). Auth and crypto unit tests run without any external dependencies.
@@ -171,7 +171,7 @@ API integration tests require a running Postgres instance (uses `DATABASE_URL`).
 For route or handler changes, also regenerate and commit Swagger output:
 
 ```bash
-~/go/bin/swag init -g cmd/server/main.go -o docs
+make swagger
 ```
 
 ---
@@ -291,8 +291,8 @@ work.
 Regenerate Swagger and restart Cambium:
 
 ```bash
-~/go/bin/swag init -g cmd/server/main.go -o docs
-go run ./cmd/server/
+make swagger
+make run-env
 ```
 
 ### `swag: command not found`
@@ -300,11 +300,11 @@ go run ./cmd/server/
 Install the Swagger generator:
 
 ```bash
-go install github.com/swaggo/swag/cmd/swag@latest
+make install-swag
 ```
 
 Then rerun:
 
 ```bash
-~/go/bin/swag init -g cmd/server/main.go -o docs
+make swagger
 ```

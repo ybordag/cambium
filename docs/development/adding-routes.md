@@ -157,7 +157,7 @@ Swagger docs are generated from handler annotations and structs in
 After changing public API shape:
 
 ```bash
-~/go/bin/swag init -g cmd/server/main.go -o docs
+make swagger
 ```
 
 Commit the regenerated files with the route change.

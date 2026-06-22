@@ -116,7 +116,7 @@ Provider keys are included only in agent requests that may call an LLM.
 - Regenerate Swagger after handler or request/response changes:
 
 ```bash
-~/go/bin/swag init -g cmd/server/main.go -o docs
+make swagger
 ```
 
 - Add or update tests next to the changed package.

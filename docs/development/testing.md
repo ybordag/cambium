@@ -15,21 +15,28 @@ fast and deterministic.
 Run the full suite:
 
 ```bash
-go test ./...
+make test
 ```
 
 Run one package:
 
 ```bash
-go test ./internal/api
-go test ./internal/auth
-go test ./internal/rhizome
+make test-api
+make test-auth
+make test-rhizome
 ```
 
 Run one test:
 
 ```bash
-go test ./internal/api -run TestDispatchData_PATCHForwardsAsPatchNotPost
+make test-one RUN=TestDispatchData_PATCHForwardsAsPatchNotPost
+```
+
+Focused route-change checks:
+
+```bash
+make test-security
+make test-proxy
 ```
 
 Some auth and DB-backed handler tests need `DATABASE_URL` pointing at a running
@@ -147,7 +154,7 @@ Swagger docs are generated from handler annotations. After changing public
 routes, request bodies, response bodies, or auth requirements, run:
 
 ```bash
-~/go/bin/swag init -g cmd/server/main.go -o docs
+make swagger
 ```
 
 Commit `docs/swagger.json` and `docs/swagger.yaml` alongside the code change.
