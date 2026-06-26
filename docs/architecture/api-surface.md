@@ -163,8 +163,12 @@ Cambium creates botanical thread IDs and forwards the new thread to Rhizome.
 Listing, history, deletion, pinned context, and session context are structured
 Rhizome data routes. Verdant should use `GET/PATCH
 /api/v1/threads/{id}/session-context` for the normalized startup/session
-context contract; Rhizome thread metadata may also include `session_context`,
-but that field is raw stored JSON and not the `SessionContextView` shape.
+context contract: `time_text`, `energy_text`, `focus_text`, `focus_context`,
+`source`, and `updated_at`. Cambium does not infer or validate focus objects;
+it forwards the body to Rhizome with the authenticated user id, and Rhizome
+validates ownership and resolves display labels. Rhizome thread metadata may
+also include `session_context`, but that field is raw stored JSON and not the
+`SessionContextView` shape.
 
 ### Calendar, Shopping, Activity
 

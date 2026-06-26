@@ -149,11 +149,13 @@ Get the normalized startup/session context for Verdant display or editing:
 ```bash
 curl http://localhost:8080/api/v1/threads/silver-fern-cascade/session-context \
   -H "Authorization: Bearer <access_token>"
-# → {"available_minutes": 30, "energy_level": "low", ..., "source": "inferred"}
+# → {"time_text": "45 minutes", "focus_text": "How do I fertilize the cherry tomatoes?", "focus_context": [...], "source": "user"}
 ```
 
 Use `GET/PATCH /api/v1/threads/{id}/session-context` for this normalized
-`SessionContextView` contract. Thread metadata may also include a
+text-first `SessionContextView` contract. Cambium forwards explicit JSON nulls
+and `focus_context` object refs unchanged; Rhizome validates object ownership
+and resolves display labels. Thread metadata may also include a
 `session_context` field, but that value is Rhizome's raw stored JSON and is not
 the frontend display/edit shape.
 

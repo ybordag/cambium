@@ -103,46 +103,43 @@ definitions:
         example: silver-fern-cascade
         type: string
     type: object
+  api.SessionContextObjectRef:
+    properties:
+      label:
+        example: Cherry Tomato (Sungold)
+        type: string
+      subject_id:
+        example: plant-uuid
+        type: string
+      subject_type:
+        example: plant
+        type: string
+    type: object
   api.SessionContextView:
     properties:
-      available_minutes:
-        example: 30
-        type: integer
-      energy_level:
-        enum:
-        - low
-        - medium
-        - high
-        example: low
+      energy_text:
+        example: low, focused, tired but can water
         type: string
-      focus_label:
-        example: Tomato bed refresh
-        type: string
-      focus_project_id:
-        example: project-uuid
-        type: string
-      open_to_outdoor_work:
-        example: true
-        type: boolean
-      preferred_location_type:
-        enum:
-        - bed
-        - container
-        example: container
+      focus_context:
+        items:
+          $ref: '#/definitions/api.SessionContextObjectRef'
+        type: array
+      focus_text:
+        example: How do I fertilize the cherry tomatoes?
         type: string
       source:
         enum:
         - unset
         - inferred
         - user
-        example: inferred
+        example: user
+        type: string
+      time_text:
+        example: 45 minutes, all afternoon
         type: string
       updated_at:
-        example: "2026-06-21T16:44:56Z"
+        example: "2026-06-25T12:00:00Z"
         type: string
-      wants_quick_wins:
-        example: true
-        type: boolean
     type: object
   api.SessionResponse:
     properties:
@@ -186,31 +183,19 @@ definitions:
     type: object
   api.UpdateSessionContextRequest:
     properties:
-      available_minutes:
-        example: 15
-        type: integer
-      energy_level:
-        enum:
-        - low
-        - medium
-        - high
-        example: medium
+      energy_text:
+        example: low, focused, tired but can water
         type: string
-      focus_project_id:
-        example: project-uuid
+      focus_context:
+        items:
+          $ref: '#/definitions/api.SessionContextObjectRef'
+        type: array
+      focus_text:
+        example: How do I fertilize the cherry tomatoes?
         type: string
-      open_to_outdoor_work:
-        example: false
-        type: boolean
-      preferred_location_type:
-        enum:
-        - bed
-        - container
-        example: bed
+      time_text:
+        example: 45 minutes, all afternoon
         type: string
-      wants_quick_wins:
-        example: true
-        type: boolean
     type: object
 host: localhost:8080
 info:

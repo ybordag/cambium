@@ -223,15 +223,14 @@ func TestGetThreadSessionContext_ProxiesToRhizome(t *testing.T) {
 		gotQuery = r.URL.RawQuery
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]any{
-			"available_minutes":       20,
-			"energy_level":            "low",
-			"focus_project_id":        nil,
-			"focus_label":             nil,
-			"preferred_location_type": "container",
-			"open_to_outdoor_work":    true,
-			"wants_quick_wins":        true,
-			"source":                  "inferred",
-			"updated_at":              "2026-06-21T16:44:56Z",
+			"time_text":   "45 minutes, all afternoon",
+			"energy_text": "low, focused",
+			"focus_text":  "How do I fertilize the cherry tomatoes?",
+			"focus_context": []map[string]any{
+				{"subject_type": "plant", "subject_id": "plant-1", "label": "Cherry Tomato (Sungold)"},
+			},
+			"source":     "user",
+			"updated_at": "2026-06-25T16:44:56Z",
 		})
 	}))
 	defer fake.Close()
@@ -252,7 +251,7 @@ func TestGetThreadSessionContext_ProxiesToRhizome(t *testing.T) {
 	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
 		t.Fatalf("decode response: %v", err)
 	}
-	if out["source"] != "inferred" || out["available_minutes"] != float64(20) {
+	if out["source"] != "user" || out["focus_text"] != "How do I fertilize the cherry tomatoes?" {
 		t.Errorf("expected rhizome response forwarded verbatim, got %v", out)
 	}
 	if gotMethod != http.MethodGet {
@@ -276,15 +275,15 @@ func TestPatchThreadSessionContext_ProxiesAsPatchWithBody(t *testing.T) {
 		json.NewDecoder(r.Body).Decode(&gotBody)
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]any{
-			"available_minutes":       10,
-			"energy_level":            "high",
-			"focus_project_id":        nil,
-			"focus_label":             nil,
-			"preferred_location_type": nil,
-			"open_to_outdoor_work":    false,
-			"wants_quick_wins":        true,
-			"source":                  "user",
-			"updated_at":              "2026-06-21T16:44:56Z",
+			"time_text":   nil,
+			"energy_text": "low, focused",
+			"focus_text":  "How do I fertilize the cherry tomatoes?",
+			"focus_context": []map[string]any{
+				{"subject_type": "plant", "subject_id": "plant-1", "label": "Cherry Tomato (Sungold)"},
+				{"subject_type": "task", "subject_id": "task-1", "label": "Fertilize Tomato"},
+			},
+			"source":     "user",
+			"updated_at": "2026-06-25T16:44:56Z",
 		})
 	}))
 	defer fake.Close()
@@ -298,7 +297,7 @@ func TestPatchThreadSessionContext_ProxiesAsPatchWithBody(t *testing.T) {
 	}
 
 	resp := doRequestWithToken(t, srv, "PATCH", "/api/v1/threads/thread-1/session-context",
-		`{"available_minutes":10,"energy_level":"high","open_to_outdoor_work":false}`, token)
+		`{"time_text":null,"energy_text":"low, focused","focus_text":"How do I fertilize the cherry tomatoes?","focus_context":[{"subject_type":"plant","subject_id":"plant-1"},{"subject_type":"task","subject_id":"task-1"}]}`, token)
 	if resp.Code != http.StatusOK {
 		t.Fatalf("patch session context: got %d — %s", resp.Code, resp.Body)
 	}
@@ -311,8 +310,15 @@ func TestPatchThreadSessionContext_ProxiesAsPatchWithBody(t *testing.T) {
 	if gotQuery != "user_id="+wantUserID {
 		t.Errorf("expected Cambium to inject user_id query, got %q", gotQuery)
 	}
-	if gotBody["available_minutes"] != float64(10) || gotBody["energy_level"] != "high" || gotBody["open_to_outdoor_work"] != false {
-		t.Errorf("body not forwarded: %v", gotBody)
+	if _, ok := gotBody["time_text"]; !ok || gotBody["time_text"] != nil {
+		t.Errorf("explicit null time_text not forwarded: %v", gotBody)
+	}
+	if gotBody["energy_text"] != "low, focused" || gotBody["focus_text"] != "How do I fertilize the cherry tomatoes?" {
+		t.Errorf("text fields not forwarded: %v", gotBody)
+	}
+	focusContext, ok := gotBody["focus_context"].([]any)
+	if !ok || len(focusContext) != 2 {
+		t.Errorf("focus_context entries not forwarded unchanged: %v", gotBody)
 	}
 }
 
@@ -436,7 +442,7 @@ func TestThreadSessionContext_RhizomeUnavailableReturns502(t *testing.T) {
 		body   string
 	}{
 		{name: "get", method: "GET"},
-		{name: "patch", method: "PATCH", body: `{"available_minutes":10}`},
+		{name: "patch", method: "PATCH", body: `{"focus_text":"tomatoes"}`},
 	}
 
 	for _, tt := range tests {
@@ -472,7 +478,7 @@ func TestThreadContext_RequiresAuth(t *testing.T) {
 		t.Errorf("get session context without auth: got %d, want 401", resp.Code)
 	}
 
-	resp = doRequest(t, srv, "PATCH", "/api/v1/threads/thread-1/session-context", `{"available_minutes":10}`)
+	resp = doRequest(t, srv, "PATCH", "/api/v1/threads/thread-1/session-context", `{"focus_text":"tomatoes"}`)
 	if resp.Code != http.StatusUnauthorized {
 		t.Errorf("patch session context without auth: got %d, want 401", resp.Code)
 	}
