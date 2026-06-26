@@ -159,6 +159,11 @@ and resolves display labels. Thread metadata may also include a
 `session_context` field, but that value is Rhizome's raw stored JSON and is not
 the frontend display/edit shape.
 
+For object-focused chat, update the session context before opening the stream:
+create or select the thread, PATCH `focus_text` and `focus_context`, then call
+the chat stream endpoint. Sending only an object name in prose is less reliable
+than sending the anchored object id.
+
 ## 5. Chat with the agent
 
 Every chat request requires the `thread_id` from step 4.

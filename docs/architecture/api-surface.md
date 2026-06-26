@@ -170,6 +170,11 @@ validates ownership and resolves display labels. Rhizome thread metadata may
 also include `session_context`, but that field is raw stored JSON and not the
 `SessionContextView` shape.
 
+When Verdant has a selected garden object, it should create or select the
+thread, PATCH `focus_text` plus `focus_context` refs through Cambium, then start
+the chat stream. Prose-only mentions such as a batch name do not carry the
+stable object id Rhizome needs for reliable focus resolution.
+
 ### Calendar, Shopping, Activity
 
 - `/api/v1/calendar/annotations`
