@@ -322,6 +322,77 @@ func TestPatchThreadSessionContext_ProxiesAsPatchWithBody(t *testing.T) {
 	}
 }
 
+func TestPatchThreadSessionContext_ForwardsEmptyFocusContextList(t *testing.T) {
+	var gotBody map[string]any
+	fake := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		json.NewDecoder(r.Body).Decode(&gotBody)
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]any{
+			"focus_context": []map[string]any{},
+			"source":        "user",
+		})
+	}))
+	defer fake.Close()
+	t.Setenv("RHIZOME_INTERNAL_URL", fake.URL)
+
+	srv := newTestServer(t)
+	token := registerAndGetToken(t, srv, "session-context-empty-focus@example.com")
+
+	resp := doRequestWithToken(t, srv, "PATCH", "/api/v1/threads/thread-1/session-context",
+		`{"focus_context":[]}`, token)
+	if resp.Code != http.StatusOK {
+		t.Fatalf("patch session context: got %d — %s", resp.Code, resp.Body)
+	}
+	focusContext, ok := gotBody["focus_context"].([]any)
+	if !ok {
+		t.Fatalf("focus_context was not forwarded as an array: %v", gotBody)
+	}
+	if len(focusContext) != 0 {
+		t.Errorf("expected empty focus_context forwarded unchanged, got %v", gotBody)
+	}
+}
+
+func TestPatchThreadSessionContext_ForwardsUnknownPayloadFieldsToRhizome(t *testing.T) {
+	var gotBody map[string]any
+	fake := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		json.NewDecoder(r.Body).Decode(&gotBody)
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]any{
+			"focus_text": "tomatoes",
+			"source":     "user",
+		})
+	}))
+	defer fake.Close()
+	t.Setenv("RHIZOME_INTERNAL_URL", fake.URL)
+
+	srv := newTestServer(t)
+	token := registerAndGetToken(t, srv, "session-context-unknown-fields@example.com")
+
+	resp := doRequestWithToken(t, srv, "PATCH", "/api/v1/threads/thread-1/session-context",
+		`{"focus_text":"tomatoes","client_only":"keep","focus_context":[{"subject_type":"plant","subject_id":"plant-1","label":"client label","client_meta":{"source":"verdant"}}]}`, token)
+	if resp.Code != http.StatusOK {
+		t.Fatalf("patch session context: got %d — %s", resp.Code, resp.Body)
+	}
+	if gotBody["client_only"] != "keep" {
+		t.Errorf("root unknown field was not forwarded unchanged: %v", gotBody)
+	}
+	focusContext, ok := gotBody["focus_context"].([]any)
+	if !ok || len(focusContext) != 1 {
+		t.Fatalf("focus_context entries not forwarded unchanged: %v", gotBody)
+	}
+	entry, ok := focusContext[0].(map[string]any)
+	if !ok {
+		t.Fatalf("focus_context entry has unexpected shape: %v", focusContext[0])
+	}
+	if entry["label"] != "client label" {
+		t.Errorf("nested label field was not forwarded to Rhizome: %v", entry)
+	}
+	clientMeta, ok := entry["client_meta"].(map[string]any)
+	if !ok || clientMeta["source"] != "verdant" {
+		t.Errorf("nested unknown object was not forwarded unchanged: %v", entry)
+	}
+}
+
 // fakeRhizomeStatus returns a server that always responds with the given
 // status and JSON body, regardless of method or path — used to verify
 // Cambium passes Rhizome's error responses through unchanged.
@@ -425,6 +496,25 @@ func TestPatchThreadSessionContext_PassesThroughRhizome400(t *testing.T) {
 	json.NewDecoder(resp.Body).Decode(&out)
 	if out["detail"] != "empty session context patch" {
 		t.Errorf("expected rhizome body forwarded verbatim, got %v", out)
+	}
+}
+
+func TestPatchThreadSessionContext_PassesThroughRhizome422(t *testing.T) {
+	fake := fakeRhizomeStatus(t, http.StatusUnprocessableEntity, `{"detail":[{"loc":["body","focus_context",0,"label"],"msg":"extra fields not permitted"}]}`)
+	t.Setenv("RHIZOME_INTERNAL_URL", fake.URL)
+
+	srv := newTestServer(t)
+	token := registerAndGetToken(t, srv, "session-context-422@example.com")
+
+	resp := doRequestWithToken(t, srv, "PATCH", "/api/v1/threads/thread-1/session-context",
+		`{"focus_context":[{"subject_type":"plant","subject_id":"p1","label":"client label"}]}`, token)
+	if resp.Code != http.StatusUnprocessableEntity {
+		t.Fatalf("expected 422 passed through from rhizome, got %d — %s", resp.Code, resp.Body)
+	}
+	var out map[string]any
+	json.NewDecoder(resp.Body).Decode(&out)
+	if _, ok := out["detail"].([]any); !ok {
+		t.Errorf("expected rhizome validation body forwarded verbatim, got %v", out)
 	}
 }
 
