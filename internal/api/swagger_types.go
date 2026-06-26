@@ -120,14 +120,22 @@ type SessionContextObjectRef struct {
 	Label       *string `json:"label,omitempty" example:"Cherry Tomato (Sungold)"`
 }
 
+// SessionContextObjectRefInput is one object reference accepted in
+// UpdateSessionContextRequest. Labels are response-only: Rhizome validates the
+// authenticated user owns the referenced object and resolves display labels.
+type SessionContextObjectRefInput struct {
+	SubjectType string `json:"subject_type" example:"plant"`
+	SubjectID   string `json:"subject_id" example:"plant-uuid"`
+}
+
 // UpdateSessionContextRequest is a partial override body for PATCH
 // /api/v1/threads/{id}/session-context. Explicit JSON null clears nullable
 // fields; omitted fields are left unchanged.
 type UpdateSessionContextRequest struct {
-	TimeText     *string                   `json:"time_text,omitempty" example:"45 minutes, all afternoon"`
-	EnergyText   *string                   `json:"energy_text,omitempty" example:"low, focused, tired but can water"`
-	FocusText    *string                   `json:"focus_text,omitempty" example:"How do I fertilize the cherry tomatoes?"`
-	FocusContext []SessionContextObjectRef `json:"focus_context,omitempty"`
+	TimeText     *string                        `json:"time_text,omitempty" example:"45 minutes, all afternoon"`
+	EnergyText   *string                        `json:"energy_text,omitempty" example:"low, focused, tired but can water"`
+	FocusText    *string                        `json:"focus_text,omitempty" example:"How do I fertilize the cherry tomatoes?"`
+	FocusContext []SessionContextObjectRefInput `json:"focus_context,omitempty"`
 }
 
 // --- Errors ---

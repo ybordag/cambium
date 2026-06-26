@@ -154,8 +154,9 @@ curl http://localhost:8080/api/v1/threads/silver-fern-cascade/session-context \
 
 Use `GET/PATCH /api/v1/threads/{id}/session-context` for this normalized
 text-first `SessionContextView` contract. Cambium forwards explicit JSON nulls
-and `focus_context` object refs unchanged; Rhizome validates object ownership
-and resolves display labels. Thread metadata may also include a
+and `focus_context` object refs unchanged; PATCH refs should be
+`{ subject_type, subject_id }`. Rhizome validates object ownership and resolves
+display labels, so `label` is response-only. Thread metadata may also include a
 `session_context` field, but that value is Rhizome's raw stored JSON and is not
 the frontend display/edit shape.
 

@@ -115,6 +115,15 @@ definitions:
         example: plant
         type: string
     type: object
+  api.SessionContextObjectRefInput:
+    properties:
+      subject_id:
+        example: plant-uuid
+        type: string
+      subject_type:
+        example: plant
+        type: string
+    type: object
   api.SessionContextView:
     properties:
       energy_text:
@@ -188,7 +197,7 @@ definitions:
         type: string
       focus_context:
         items:
-          $ref: '#/definitions/api.SessionContextObjectRef'
+          $ref: '#/definitions/api.SessionContextObjectRefInput'
         type: array
       focus_text:
         example: How do I fertilize the cherry tomatoes?

@@ -31,4 +31,13 @@ func TestSessionContextSwaggerUsesTextFirstContract(t *testing.T) {
 	if !strings.Contains(swagger, `"api.SessionContextObjectRef"`) {
 		t.Fatal("swagger is missing the focus_context object-ref schema")
 	}
+	if !strings.Contains(swagger, `"api.SessionContextObjectRefInput"`) {
+		t.Fatal("swagger is missing the request-only focus_context object-ref schema")
+	}
+	if !strings.Contains(swagger, `"$ref": "#/definitions/api.SessionContextObjectRefInput"`) {
+		t.Fatal("swagger PATCH session context should use the request-only focus_context schema")
+	}
+	if !strings.Contains(swagger, `"$ref": "#/definitions/api.SessionContextObjectRef"`) {
+		t.Fatal("swagger session context response should use the labeled focus_context schema")
+	}
 }

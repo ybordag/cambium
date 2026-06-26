@@ -1331,6 +1331,19 @@ const docTemplate = `{
                 }
             }
         },
+        "api.SessionContextObjectRefInput": {
+            "type": "object",
+            "properties": {
+                "subject_id": {
+                    "type": "string",
+                    "example": "plant-uuid"
+                },
+                "subject_type": {
+                    "type": "string",
+                    "example": "plant"
+                }
+            }
+        },
         "api.SessionContextView": {
             "type": "object",
             "properties": {
@@ -1434,7 +1447,7 @@ const docTemplate = `{
                 "focus_context": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/api.SessionContextObjectRef"
+                        "$ref": "#/definitions/api.SessionContextObjectRefInput"
                     }
                 },
                 "focus_text": {
